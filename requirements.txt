@@ -11,3 +11,4 @@ aiosqlite
 chromadb
 sentence-transformers
 lxml
+apscheduler

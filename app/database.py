@@ -144,12 +144,12 @@ async def upsert_source(url: str, source_type: str, name: str | None = None, fee
 
 
 async def get_all_sources() -> list[dict]:
-    """Retrieve all followed sources from SQLite."""
+    """Return every stored source as a dict, for scheduled refresh."""
     db = await get_db()
     try:
-        cursor = await db.execute("SELECT * FROM sources ORDER BY created_at DESC")
+        cursor = await db.execute("SELECT * FROM sources")
         rows = await cursor.fetchall()
-        return [dict(r) for r in rows]
+        return [dict(row) for row in rows]
     finally:
         await db.close()
 

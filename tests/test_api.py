@@ -175,3 +175,75 @@ def test_post_extract_listing_page(client):
     for art in data["articles"]:
         assert art["url"].startswith("https://example.com/entertainment/")
         assert art["summary"] is not None
+
+
+@pytest.mark.asyncio
+async def test_refresh_all_sources_function():
+    from app.main import refresh_all_sources
+
+    mock_sources = [
+        {
+            "id": "src-1",
+            "url": "https://example.com/feed1.xml",
+            "type": "rss",
+            "name": "Feed 1",
+            "feed_url": "https://example.com/feed1.xml",
+            "last_seen_marker": "marker-1",
+        },
+        {
+            "id": "src-2",
+            "url": "https://example.com/blog",
+            "type": "website",
+            "name": "Blog",
+            "feed_url": None,
+            "last_seen_marker": None,
+        },
+        {
+            "id": "src-3",
+            "url": "https://failing-site.com",
+            "type": "website",
+            "name": "Failing",
+            "feed_url": None,
+            "last_seen_marker": None,
+        },
+    ]
+
+    async def mock_fetch(source_dict):
+        if "failing" in source_dict["url"]:
+            raise RuntimeError("Connection timed out")
+        if source_dict["id"] == "src-1":
+            return [{"url": "https://example.com/post1"}, {"url": "https://example.com/post2"}]
+        return [{"url": "https://example.com/blog/1"}]
+
+    with patch("app.main.get_all_sources", new_callable=AsyncMock, return_value=mock_sources), \
+         patch("app.main.fetch_new_items", side_effect=mock_fetch):
+        results = await refresh_all_sources()
+
+    assert results["https://example.com/feed1.xml"] == 2
+    assert results["https://example.com/blog"] == 1
+    assert results["https://failing-site.com"] == "error"
+
+
+def test_post_refresh_all_endpoint(client):
+    mock_results = {
+        "https://example.com/rss": 3,
+        "https://news.ycombinator.com": 0,
+        "https://failing-domain.org": "error",
+    }
+    with patch("app.main.refresh_all_sources", new_callable=AsyncMock, return_value=mock_results):
+        response = client.post("/refresh-all")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["https://example.com/rss"] == 3
+    assert data["https://news.ycombinator.com"] == 0
+    assert data["https://failing-domain.org"] == "error"
+
+
+def test_scheduler_status(client):
+    response = client.get("/scheduler")
+    assert response.status_code == 200
+    data = response.json()
+    assert "running" in data
+    assert data["interval"] == "30 minutes"
+    assert data["job_id"] == "refresh_all"

@@ -22,6 +22,7 @@ from urllib.parse import urljoin, urlparse
 
 import feedparser
 import httpx
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from bs4 import BeautifulSoup
 from fastapi import FastAPI, HTTPException, Query, Response, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -59,12 +60,6 @@ from app.models import (
     SourceModel,
 )
 from app.noise_filter import noise_filter
-from app.scheduler import (
-    get_scheduler_status,
-    refresh_all_sources,
-    shutdown_scheduler,
-    start_scheduler,
-)
 from app.scraper import (
     ExtractionFailed,
     _extract_substack,
@@ -82,6 +77,30 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+scheduler = AsyncIOScheduler()
+
+
+async def refresh_all_sources() -> dict:
+    """Check every stored source for new items. Called by both cron and manual trigger."""
+    sources = await get_all_sources()
+    results = {}
+    for source in sources:
+        source_dict = {
+            "id": source["id"],
+            "url": source["url"],
+            "type": source["type"],
+            "name": source["name"],
+            "feed_url": source["feed_url"] or source["url"],
+            "last_seen_marker": source["last_seen_marker"],
+        }
+        try:
+            items = await fetch_new_items(source_dict)
+            results[source["url"]] = len(items)
+        except Exception as e:
+            logger.error("Scheduled refresh failed for %s: %s", source["url"], e)
+            results[source["url"]] = "error"
+    return results
+
 
 # ---------------------------------------------------------------------------
 # Lifespan
@@ -89,13 +108,12 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Ensure database schema is initialized and background refresh scheduler starts."""
     logger.info("Initializing database schema...")
     await init_db()
-    # Start automated 24-hour background source refresh cron
-    start_scheduler(interval_hours=24)
+    scheduler.add_job(refresh_all_sources, "interval", minutes=30, id="refresh_all")
+    scheduler.start()
     yield
-    shutdown_scheduler()
+    scheduler.shutdown()
     logger.info("Application shutdown.")
 
 
@@ -589,26 +607,47 @@ async def remove_source(source_id: str):
     return {"status": "deleted", "source_id": source_id}
 
 
+@app.post("/refresh-all", summary="Check all stored sources for new items")
+async def refresh_all_endpoint():
+    return await refresh_all_sources()
+
+
 @app.post("/refresh", response_model=RefreshResponse, summary="Manual refresh trigger across all followed sources")
-async def trigger_refresh(limit_per_source: int = Query(default=4, ge=1, le=10)):
+async def trigger_refresh():
     """
-    Manually triggers an immediate pull across all followed YouTube channels and blogs,
-    extracting genuinely new items, summarizing them, and indexing into the daily newspaper.
+    Manually triggers an immediate pull across all followed YouTube channels and blogs.
     """
-    stats = await refresh_all_sources(limit_per_source=limit_per_source)
+    results = await refresh_all_sources()
+    if isinstance(results, dict) and "new_items_count" in results:
+        return RefreshResponse(
+            status=results.get("status", "success"),
+            new_items_count=results.get("new_items_count", 0),
+            sources_checked=results.get("sources_checked", 0),
+            errors_count=results.get("errors_count", 0),
+            refreshed_at=results.get("refreshed_at", datetime.now(timezone.utc).isoformat()),
+        )
+    new_items_count = sum(v for v in results.values() if isinstance(v, int))
+    errors_count = sum(1 for v in results.values() if v == "error")
     return RefreshResponse(
-        status=stats.get("status", "success"),
-        new_items_count=stats.get("new_items_count", 0),
-        sources_checked=stats.get("sources_checked", 0),
-        errors_count=stats.get("errors_count", 0),
-        refreshed_at=stats.get("refreshed_at", datetime.now(timezone.utc).isoformat()),
+        status="success",
+        new_items_count=new_items_count,
+        sources_checked=len(results),
+        errors_count=errors_count,
+        refreshed_at=datetime.now(timezone.utc).isoformat(),
     )
 
 
 @app.get("/scheduler", summary="Get background cron scheduler status")
 async def scheduler_status_endpoint():
-    """Returns the background refresh schedule status, last run time, and statistics."""
-    return get_scheduler_status()
+    """Returns the background refresh schedule status, job details, and running state."""
+    job = scheduler.get_job("refresh_all")
+    next_run = job.next_run_time.isoformat() if job and job.next_run_time else None
+    return {
+        "running": bool(scheduler.running),
+        "job_id": "refresh_all",
+        "interval": "30 minutes",
+        "next_run_time": next_run,
+    }
 
 
 @app.get("/newspaper", summary="Get the latest daily newspaper briefing items")
@@ -616,15 +655,6 @@ async def get_daily_newspaper(limit: int = Query(default=30, ge=1, le=100)):
     """Retrieve the recent processed article & video stories from the database."""
     items = await get_recent_processed_items(limit=limit)
     return {"items": items, "count": len(items)}
-
-    success_count = sum(1 for r in results if isinstance(r, ArticleResult))
-    failure_count = len(results) - success_count
-
-    return BatchExtractResponse(
-        results=results,
-        success_count=success_count,
-        failure_count=failure_count,
-    )
 
 
 # ---------------------------------------------------------------------------
