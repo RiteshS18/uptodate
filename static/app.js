@@ -23,13 +23,19 @@ const PRESETS = {
             deck: "Sequased et har lam, in-nistiusae im vento — finding peace and communion in an ever-shifting modern age.",
             author: "The Editorial Board / Father Thomas",
             published_date: "2026-09-19",
-            category: "Community & Faith",
+            category: "Faith & Community",
             extraction_method: "editorial_press",
             fetch_strategy: "direct",
             image_url: "https://images.unsplash.com/photo-1548625361-195fe612b7f3?w=800&auto=format&fit=crop&q=80",
             image_caption: "Excepelessi minctemo turem, que voluptatis num volup, Sam te sero sent eros.",
             callout_title: "Our Church's Mission:",
             callout_text: "Tempeleste — Nequi oust quiet in velleut diero laguate corus eos am qui sent ducil. Come join us every Sunday at morning worship and fellowship.",
+            summary: "Under the soaring stone arches and radiant stained glass of our sanctuary, generations of seekers have found solace, purpose, and enduring fellowship. Divine love is expressed through communal grace, charity, and open-hearted fellowship.",
+            takeaways: [
+                "Weekly ministries encompass community food distribution and youth education",
+                "Sunday services feature contemplative choir music and open community fellowship",
+                "Dedicated pastoral care offering solace in an accelerating technological age"
+            ],
             text: `Under the soaring stone arches and radiant stained glass of our sanctuary, generations of seekers have found solace, purpose, and enduring fellowship. As our world accelerates with relentless technological change, the timeless sanctuary of contemplative faith provides an anchor for the soul.\n\nIn our congregation, we believe that divine love is not an abstract concept confined to ancient scriptures, but a living, breathing reality expressed through communal grace, charity, and open-hearted fellowship. Every person walking through our doors is welcomed without pretense or judgment.\n\nOur weekly ministries encompass community food distribution, interfaith dialogues, youth education, and contemplative choir music. We invite you to join us for our Sunday morning services and experience the profound stillness and warmth of a community united in purpose and kindness.`
         },
         {
@@ -38,11 +44,16 @@ const PRESETS = {
             deck: "An open invitation to neighborhood families and seekers across all backgrounds.",
             author: "Sister Margaret",
             published_date: "2026-09-18",
-            category: "Fellowship",
+            category: "Faith & Community",
             extraction_method: "trafilatura",
             fetch_strategy: "direct",
             image_url: "https://images.unsplash.com/photo-1519817650390-64a93db51149?w=400&auto=format&fit=crop&q=80",
             highlight_tag: "Highlight",
+            summary: "Faith thrives when barriers fall away. Our community doors are wide open to individuals and families from every background.",
+            takeaways: [
+                "Open communion and fellowship every weekend",
+                "Accessible support programs for neighborhood families"
+            ],
             text: `Faith thrives when barriers fall away. Our community doors are wide open to individuals and families from every background, offering warm hospitality, community support, and uplifting musical services every weekend.`
         },
         {
@@ -56,6 +67,11 @@ const PRESETS = {
             fetch_strategy: "direct",
             image_url: "https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=400&auto=format&fit=crop&q=80",
             pull_quote: "“In quietness and confidence shall be your strength.” — Isaiah 30:15",
+            summary: "Founded with a vision of radical compassion, our parish outreach programs provide meals, tutoring, and family support.",
+            takeaways: [
+                "Over 500 local residents served weekly through outreach",
+                "Volunteer-driven interfaith programs across the region"
+            ],
             text: `Founded with a vision of radical compassion, our parish outreach programs provide meals, educational tutoring, and family counseling services to over five hundred local residents each week.\n\nThrough volunteer engagement and generous neighborhood contributions, our mission continues to expand across the metropolitan region.`
         }
     ],
@@ -66,13 +82,19 @@ const PRESETS = {
             deck: "Why the intersection of high-bandwidth memory, optical interconnects, and nuclear energy defines the next epoch of computing.",
             author: "Ben Thompson / Stratechery",
             published_date: "2026-09-19",
-            category: "Technology",
+            category: "Technology & AI",
             extraction_method: "trafilatura",
             fetch_strategy: "direct",
             image_url: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&auto=format&fit=crop&q=80",
             image_caption: "Next-generation datacenter clusters scaling beyond physical reticle constraints with custom optical fabrics.",
             callout_title: "Key Infrastructure Shift:",
             callout_text: "Memory bandwidth per FLOP has replaced raw compute as the primary bottleneck in continuous generative inference pipelines.",
+            summary: "Large-scale neural network development has shifted from pure parameter count scaling to a complex optimization spanning memory hierarchy, inference latency, and power availability. Inference clusters capable of speculative decoding are driving new hardware paradigms.",
+            takeaways: [
+                "Test-time compute and reasoning models are reorganizing AI deployment economics",
+                "High-bandwidth optical interconnects form a steep competitive moat for frontier labs",
+                "Datacenter power scaling requires gigawatt-level dedicated energy sourcing"
+            ],
             text: `The trajectory of large-scale neural network development has shifted from pure parameter count scaling to a multifaceted optimization problem spanning memory hierarchy, inference latency, and gigawatt-scale power availability.\n\nAs reasoning models demonstrate test-time compute gains, the economics of AI deployment are reorganizing around dedicated inference clusters capable of high-throughput speculative decoding.\n\nMoreover, the vertical integration of custom silicon with bespoke high-bandwidth optical interconnects represents the steepest competitive moat for frontier AI labs in this decade.`
         },
         {
@@ -86,6 +108,11 @@ const PRESETS = {
             fetch_strategy: "direct",
             image_url: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=400&auto=format&fit=crop&q=80",
             highlight_tag: "Deep Dive",
+            summary: "Structured concurrency ensures that child coroutines cannot outlive their calling parent scope, eliminating dangling tasks.",
+            takeaways: [
+                "Tasks are bound directly to lexical blocks for deterministic cleanup",
+                "Eliminates memory leaks historically common in complex async codebases"
+            ],
             text: `Structured concurrency ensures that child coroutines cannot outlive their calling parent scope. By binding task lifecycles directly to lexical lexical blocks, complex asynchronous architectures become dramatically simpler to reason about, test, and debug.`
         },
         {
@@ -99,93 +126,12 @@ const PRESETS = {
             fetch_strategy: "direct",
             image_url: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=400&auto=format&fit=crop&q=80",
             pull_quote: "“When electrons hit the copper barrier, light becomes the only medium capable of scale.”",
+            summary: "Optical transceivers co-packaged with silicon processors are overcoming thermal and distance limitations of electrical signaling.",
+            takeaways: [
+                "Enables thousands of accelerator chips to behave as unified memory",
+                "Drastically reduces interconnect latency across distributed clusters"
+            ],
             text: `Optical transceivers directly co-packaged with silicon processors are overcoming the thermal and distance limitations of traditional electrical signaling, allowing clusters of thousands of accelerator chips to behave as a single unified memory fabric.`
-        }
-    ],
-    world: [
-        {
-            url: "https://example.com/world/global-energy-accord",
-            title: "Historic Global Energy Accord Ratified in Geneva Summit",
-            deck: "Delegates from 190 nations establish multi-billion dollar clean grid transition fund.",
-            author: "Elena Rostova / International Bureau",
-            published_date: "2026-09-19",
-            category: "Global Affairs",
-            extraction_method: "trafilatura",
-            fetch_strategy: "direct",
-            image_url: "https://images.unsplash.com/photo-1497435334941-8c899ee9e8e9?w=800&auto=format&fit=crop&q=80",
-            image_caption: "Representatives assemble at the Palace of Nations following unanimous consensus.",
-            callout_title: "Summit Resolution:",
-            callout_text: "A $450B credit guarantee facility will accelerate grid-scale battery deployment across developing industrial hubs by 2030.",
-            text: `In what observers characterize as the most decisive multilateral climate gathering in a decade, world leaders today completed the ratification of the Geneva Energy Transition Framework.\n\nThe treaty guarantees standardized carbon accounting mechanisms, eliminates export subsidies for fossil fuel exploration, and establishes preferential financing channels for renewable grid modernizations across five continents.\n\nMarkets responded positively across European and Asian trading desks, with clean energy indices surging on the announcement.`
-        },
-        {
-            url: "https://example.com/markets/central-banks",
-            title: "Central Banks Signal Coordinated Liquidity Stabilization",
-            deck: "Monetary authorities align interest rate projections across major trade corridors.",
-            author: "Marcus Aurel",
-            published_date: "2026-09-18",
-            category: "Markets & Economy",
-            extraction_method: "trafilatura",
-            fetch_strategy: "direct",
-            image_url: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400&auto=format&fit=crop&q=80",
-            highlight_tag: "Markets",
-            text: `With core inflation settling near central target bands, monetary policy committees are prioritizing capital formation and trade corridor stability through calibrated reserve adjustments.`
-        },
-        {
-            url: "https://example.com/logistics/trade-routes",
-            title: "The Modern Maritime Silk Route: Autonomous Fleets",
-            deck: "Autonomous zero-emission container ships begin transatlantic testing.",
-            author: "Sophia Lin",
-            published_date: "2026-09-17",
-            category: "Logistics",
-            extraction_method: "trafilatura",
-            fetch_strategy: "direct",
-            image_url: "https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=400&auto=format&fit=crop&q=80",
-            pull_quote: "“Global supply chains are transitioning toward carbon-neutral automated logistics.”",
-            text: `Autonomous electric cargo vessels utilizing AI navigation corridors have completed their first continuous sea trials, reducing bunker fuel consumption and port turnaround times significantly.`
-        }
-    ],
-    culture: [
-        {
-            url: "https://example.com/culture/the-lost-art-of-attention",
-            title: "The Architecture of Contemplation: Reclaiming Deep Focus",
-            deck: "Why modern philosophers and writers are reviving slow reading and analogue craft in a world of infinite micro-stimuli.",
-            author: "Julian Thorne / Cultural Review",
-            published_date: "2026-09-19",
-            category: "Philosophy",
-            extraction_method: "trafilatura",
-            fetch_strategy: "direct",
-            image_url: "https://images.unsplash.com/photo-1507842229451-9f75069732f1?w=800&auto=format&fit=crop&q=80",
-            image_caption: "Historical library archives in Oxford, where deep reading endures as a ritual of intentional scholarship.",
-            callout_title: "Cultural Principle:",
-            callout_text: "Depth of thought is not an innate talent, but a practiced resistance to hyper-fragmented digital feeds.",
-            text: `The greatest intellectual breakthroughs in human history were forged not in the cacophony of instantaneous reaction, but in the sustained quietude of deep, undisturbed thought.\n\nAs algorithmic feeds optimize for continuous emotional arousal, an emergent cultural renaissance is prioritizing monastic study environments, long-form literature, and deliberate cognitive solitude.\n\nTo reclaim one's attention is fundamentally to reclaim the sovereignty of one's own consciousness.`
-        },
-        {
-            url: "https://example.com/culture/craft-renaissance",
-            title: "The Renaissance of Tactile Print & Bespoke Typography",
-            deck: "Why physical broadsheets and letterpress printing are experiencing record demand.",
-            author: "Clara Vance",
-            published_date: "2026-09-18",
-            category: "Design",
-            extraction_method: "trafilatura",
-            fetch_strategy: "direct",
-            image_url: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&auto=format&fit=crop&q=80",
-            highlight_tag: "Craft",
-            text: `In an era of disposable pixels, the physical weight of ink on heavy paper stock evokes a permanence and gravitas that digital screens cannot replicate.`
-        },
-        {
-            url: "https://example.com/culture/silent-walks",
-            title: "The Philosophy of the Daily Flâneur",
-            deck: "Walking through urban architecture as a meditative discipline.",
-            author: "Arthur Pendelton",
-            published_date: "2026-09-17",
-            category: "Essays",
-            extraction_method: "trafilatura",
-            fetch_strategy: "direct",
-            image_url: "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=400&auto=format&fit=crop&q=80",
-            pull_quote: "“All truly great thoughts are conceived by walking.” — Friedrich Nietzsche",
-            text: `The historical art of the flâneur—the wandering observer of urban life—offers a profound remedy to digital burnout by reconnecting the mind with physical geometry and human spontaneity.`
         }
     ]
 };
@@ -255,7 +201,6 @@ function initViewSwitcher() {
                 }
             });
 
-            // Re-render current view if needed
             if (targetView === 'newsletter') {
                 renderNewsletterView(state.articles);
             } else if (targetView === 'raw') {
@@ -300,7 +245,6 @@ function initPresetButtons() {
                 loadArticles(PRESETS[presetKey]);
                 showToast(`Loaded ${btn.textContent.trim()}`);
                 
-                // Update URL box with demo URLs
                 const urls = PRESETS[presetKey].map(a => a.url).join('\n');
                 const urlInput = document.getElementById('urlInput');
                 if (urlInput) urlInput.value = urls;
@@ -340,7 +284,7 @@ async function handleProcess() {
     progressContainer.style.display = 'block';
     progressBarFill.style.width = '15%';
     progressPercentText.textContent = '15%';
-    progressStatusText.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Contacting extraction engine...';
+    progressStatusText.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Contacting extraction &amp; summarization engine...';
     lucide.createIcons();
 
     try {
@@ -362,11 +306,10 @@ async function handleProcess() {
 
             progressBarFill.style.width = '40%';
             progressPercentText.textContent = '40%';
-            progressStatusText.innerHTML = `<i data-lucide="loader-2" class="spin"></i> Scraping ${urls.length} URLs across multi-strategy cascade...`;
+            progressStatusText.innerHTML = `<i data-lucide="loader-2" class="spin"></i> Extracting &amp; summarizing ${urls.length} URLs...`;
             lucide.createIcons();
 
             if (urls.length === 1) {
-                // Single extraction
                 const resp = await fetch('/extract', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -378,7 +321,6 @@ async function handleProcess() {
                 }
                 extractedArticles = [data];
             } else {
-                // Batch extraction
                 const concurrency = parseInt(document.getElementById('concurrencySelect').value) || 5;
                 const resp = await fetch('/extract/batch', {
                     method: 'POST',
@@ -389,13 +331,11 @@ async function handleProcess() {
                 if (!resp.ok) {
                     throw new Error(data.detail || `Batch extraction failed with status ${resp.status}`);
                 }
-                // Filter successful articles
                 extractedArticles = (data.results || []).filter(r => r.text && r.text.length > 50);
             }
 
         } else if (mode === 'raw') {
-            // Raw text input
-            const title = document.getElementById('rawTitle').value.trim() || "Untitled Dispatch";
+            const title = document.getElementById('rawTitle').value.trim() || "Collected Dispatch";
             const author = document.getElementById('rawAuthor').value.trim() || "Staff Writer";
             const body = document.getElementById('rawBody').value.trim();
 
@@ -404,6 +344,10 @@ async function handleProcess() {
                 progressContainer.style.display = 'none';
                 return;
             }
+
+            // Derive client extractive summary if direct
+            const firstPeriod = body.indexOf('.');
+            const deck = firstPeriod > 20 && firstPeriod < 180 ? body.slice(0, firstPeriod + 1) : body.slice(0, 140) + '...';
 
             extractedArticles = [{
                 url: "pasted://direct-input",
@@ -414,11 +358,16 @@ async function handleProcess() {
                 char_count: body.length,
                 extraction_method: "raw_text_ingestion",
                 fetch_strategy: "direct",
+                summary: body.slice(0, 350) + "...",
+                deck: deck,
+                takeaways: [
+                    "Direct text dispatch processed into broadsheet and newsletter format",
+                    "Ready for executive review, audio read-aloud, and PDF export"
+                ],
                 category: "Special Dispatch"
             }];
 
         } else if (mode === 'site') {
-            // Site discovery mode
             const siteUrl = document.getElementById('siteUrlInput').value.trim();
             const siteType = document.getElementById('siteTypeSelect').value;
 
@@ -442,7 +391,6 @@ async function handleProcess() {
             const newUrls = (pollData.new_item_urls || []).slice(0, 6);
 
             if (newUrls.length === 0) {
-                // Fallback to legacy single/site scraper
                 const scrapeResp = await fetch('/scrape', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -451,10 +399,9 @@ async function handleProcess() {
                 const scrapeData = await scrapeResp.json();
                 extractedArticles = scrapeData.articles || [];
             } else {
-                // Batch scrape discovered URLs
                 progressBarFill.style.width = '65%';
                 progressPercentText.textContent = '65%';
-                progressStatusText.innerHTML = `<i data-lucide="loader-2" class="spin"></i> Scraping ${newUrls.length} discovered articles...`;
+                progressStatusText.innerHTML = `<i data-lucide="loader-2" class="spin"></i> Scraping and summarizing ${newUrls.length} articles...`;
                 lucide.createIcons();
 
                 const batchResp = await fetch('/extract/batch', {
@@ -468,17 +415,16 @@ async function handleProcess() {
         }
 
         if (extractedArticles.length === 0) {
-            throw new Error('No article text could be extracted. Check the URL or site bot protections.');
+            throw new Error('No article text could be extracted. Check the URL or site connectivity.');
         }
 
         progressBarFill.style.width = '100%';
         progressPercentText.textContent = '100%';
-        progressStatusText.innerHTML = '<i data-lucide="check" style="color: #10b981;"></i> Newspaper broadsheet formatted successfully!';
+        progressStatusText.innerHTML = '<i data-lucide="check" style="color: #10b981;"></i> Processed and summarized successfully!';
         lucide.createIcons();
 
-        // Load into state & render
         loadArticles(extractedArticles);
-        showToast(`Successfully extracted ${extractedArticles.length} articles!`);
+        showToast(`Extracted & summarized ${extractedArticles.length} dispatches!`);
 
         setTimeout(() => {
             progressContainer.style.display = 'none';
@@ -498,12 +444,10 @@ async function handleProcess() {
 
 function loadArticles(articlesList) {
     state.articles = articlesList.map((art, idx) => {
-        // Compute reading time & paragraph splits
         const text = art.text || "";
         const words = text.trim().split(/\s+/).length;
         const readTime = Math.max(1, Math.ceil(words / 220));
 
-        // Derive subdeck / excerpt if not provided
         let deck = art.deck;
         if (!deck) {
             const firstPeriod = text.indexOf('.');
@@ -514,13 +458,20 @@ function loadArticles(articlesList) {
             }
         }
 
-        // Assign curated photo if missing
+        const summary = art.summary || (text.slice(0, 350) + "...");
+        const takeaways = art.takeaways && art.takeaways.length > 0 ? art.takeaways : [
+            summary.slice(0, 120) + "...",
+            "In-depth analysis and reporting extracted by Backstory engine"
+        ];
+
         const img = art.image_url || DEFAULT_IMAGES[idx % DEFAULT_IMAGES.length];
         
         return {
             ...art,
             id: `art-${idx}`,
             deck: deck,
+            summary: summary,
+            takeaways: takeaways,
             words: words,
             read_time: readTime,
             image_url: img,
@@ -528,7 +479,6 @@ function loadArticles(articlesList) {
         };
     });
 
-    // Update Masthead Stats
     const countBadge = document.getElementById('articleCountBadge');
     if (countBadge) countBadge.textContent = `${state.articles.length} DISPATCHES`;
 
@@ -536,12 +486,10 @@ function loadArticles(articlesList) {
     const readDisplay = document.getElementById('readingTimeDisplay');
     if (readDisplay) readDisplay.textContent = `${totalReadMins} MIN READ`;
 
-    // Render Views
     renderBroadsheetGrid(state.articles);
     renderNewsletterView(state.articles);
     renderRawJsonView(state.articles);
 
-    // Update news ticker
     const ticker = document.getElementById('tickerText');
     if (ticker && state.articles.length > 0) {
         const headlines = state.articles.map(a => a.title).join(' • ');
@@ -554,6 +502,7 @@ function loadArticles(articlesList) {
 function getCategoryFromText(str) {
     const lower = (str || "").toLowerCase();
     if (lower.includes('church') || lower.includes('faith') || lower.includes('god') || lower.includes('worship')) return 'Faith & Community';
+    if (lower.includes('batman') || lower.includes('comic') || lower.includes('superhero') || lower.includes('film')) return 'Comics & Entertainment';
     if (lower.includes('ai') || lower.includes('neural') || lower.includes('model') || lower.includes('software') || lower.includes('code')) return 'Technology & AI';
     if (lower.includes('market') || lower.includes('bank') || lower.includes('economy') || lower.includes('dollar') || lower.includes('trade')) return 'Economy & Markets';
     if (lower.includes('climate') || lower.includes('energy') || lower.includes('treaty') || lower.includes('summit')) return 'Global Affairs';
@@ -562,7 +511,7 @@ function getCategoryFromText(str) {
 }
 
 // ==========================================================================
-// BROADSHEET NEWSPAPER RENDERER (Exact Match to User Image Structure)
+// BROADSHEET NEWSPAPER RENDERER
 // ==========================================================================
 
 function renderBroadsheetGrid(articles) {
@@ -578,7 +527,6 @@ function renderBroadsheetGrid(articles) {
     const secondaryArticle = articles[1] || null;
     const sidebarArticles = articles.slice(2);
 
-    // Split lead article text into paragraphs
     const paragraphs = leadArticle.text.split('\n\n').filter(p => p.trim().length > 0);
     const col1Text = paragraphs.slice(0, 2).map(p => `<p>${escapeHtml(p)}</p>`).join('');
     const col2Text = paragraphs.slice(2).map(p => `<p>${escapeHtml(p)}</p>`).join('');
@@ -612,7 +560,6 @@ function renderBroadsheetGrid(articles) {
 
                 <!-- Split Layout: Hero Image + Columnar Text (Matching Reference Image) -->
                 <div class="lead-content-layout">
-                    <!-- Column Left: Hero Image + Caption + Dark Callout Box -->
                     <div class="lead-media-col">
                         <div class="editorial-media">
                             <img src="${leadArticle.image_url}" alt="Hero Editorial Media" class="editorial-media-img" onclick="openReaderModal('${leadArticle.id}')">
@@ -621,19 +568,18 @@ function renderBroadsheetGrid(articles) {
                             </div>
                         </div>
 
-                        <!-- Special Dark Callout Box (Exact match to black church mission box in user image) -->
+                        <!-- Special Dark Callout Box (Exact match to church mission box in user image) -->
                         <div class="editorial-callout-box">
                             <div class="callout-icon-wrap">
                                 ✝
                             </div>
                             <div class="callout-content">
-                                <h4>${escapeHtml(leadArticle.callout_title || "Special Dispatch Mission:")}</h4>
-                                <p>${escapeHtml(leadArticle.callout_text || leadArticle.deck)}</p>
+                                <h4>${escapeHtml(leadArticle.callout_title || "Executive Briefing:")}</h4>
+                                <p>${escapeHtml(leadArticle.summary || leadArticle.callout_text || leadArticle.deck)}</p>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Column Right: Drop Cap Lead Editorial Prose -->
                     <div class="lead-text-col">
                         <div class="editorial-text drop-cap">
                             ${col1Text || `<p>${escapeHtml(leadArticle.text)}</p>`}
@@ -643,7 +589,7 @@ function renderBroadsheetGrid(articles) {
                 </div>
             </article>
 
-            <!-- 2. Secondary Bottom Story Strip (Matching Bottom Panel in Reference Image) -->
+            <!-- 2. Secondary Bottom Story Strip -->
             ${secondaryArticle ? `
                 <article class="secondary-story-strip">
                     <img src="${secondaryArticle.image_url}" alt="Thumbnail" class="strip-thumbnail" onclick="openReaderModal('${secondaryArticle.id}')">
@@ -653,19 +599,19 @@ function renderBroadsheetGrid(articles) {
                             ${escapeHtml(secondaryArticle.author || "Staff")} • ${escapeHtml(secondaryArticle.published_date || "Recent")}
                         </div>
                         <p class="strip-text">
-                            <span class="strip-highlight-tag">${escapeHtml(secondaryArticle.highlight_tag || "Highlight")}</span>
-                            ${escapeHtml(secondaryArticle.deck || secondaryArticle.text.slice(0, 220))}...
+                            <span class="strip-highlight-tag">${escapeHtml(secondaryArticle.highlight_tag || "Summary")}</span>
+                            ${escapeHtml(secondaryArticle.summary || secondaryArticle.deck)}
                         </p>
                     </div>
                 </article>
             ` : ''}
         </div>
 
-        <!-- Right Broadsheet Sidebar (Matching Right Panel in Reference Image) -->
+        <!-- Right Broadsheet Sidebar -->
         <aside class="broadsheet-sidebar">
             <div class="sidebar-section-header">
                 <i data-lucide="bookmark" style="width: 14px; height: 14px;"></i>
-                <span>About &amp; Daily Columns</span>
+                <span>Key Columns &amp; Briefs</span>
             </div>
 
             ${sidebarArticles.length > 0 ? sidebarArticles.map(art => `
@@ -679,18 +625,17 @@ function renderBroadsheetGrid(articles) {
                     ` : ''}
 
                     <div class="sidebar-story-text editorial-text">
-                        <p>${escapeHtml(art.text.slice(0, 320))}...</p>
+                        <p><strong>Executive Summary:</strong> ${escapeHtml(art.summary || art.deck)}</p>
                     </div>
                 </article>
             `).join('') : `
-                <!-- Default About & Briefs sidebar if only 1-2 articles -->
                 <article class="sidebar-story">
-                    <h4>About This Edition</h4>
+                    <h4>Executive Summary Brief</h4>
                     <p class="sidebar-story-text">
-                        This daily newspaper frontpage is compiled directly from web publications, RSS streams, and raw author dispatches using the Backstory extraction pipeline.
+                        ${escapeHtml(leadArticle.summary || "All extracted text is synthesized and organized into structured broadsheet and newsletter briefings.")}
                     </p>
                     <div class="pull-quote">
-                        “Clean, structured reading for the modern independent mind.”
+                        “Synthesizing information into clear, actionable newsletter editions.”
                     </div>
                     <img src="https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=400&auto=format&fit=crop&q=80" alt="Newspaper" class="sidebar-story-img">
                 </article>
@@ -700,7 +645,7 @@ function renderBroadsheetGrid(articles) {
 }
 
 // ==========================================================================
-// NEWSLETTER VIEW RENDERER
+// NEWSLETTER VIEW RENDERER (Processed Newsletter Format)
 // ==========================================================================
 
 function renderNewsletterView(articles) {
@@ -713,14 +658,16 @@ function renderNewsletterView(articles) {
         return;
     }
 
-    // Build Executive Takeaways
+    // Build Executive Takeaways at the top
     if (execSummaryList) {
         execSummaryList.innerHTML = articles.map(art => `
-            <li><strong>${escapeHtml(art.category)}:</strong> ${escapeHtml(art.deck || art.title)}</li>
+            <li style="margin-bottom: 0.5rem;">
+                <strong>${escapeHtml(art.category)}:</strong> ${escapeHtml(art.deck || art.title)}
+            </li>
         `).join('');
     }
 
-    // Build Newsletter Story Blocks
+    // Build Newsletter Story Blocks with Summaries & Takeaway Checklists
     list.innerHTML = articles.map(art => `
         <article class="newsletter-article-item">
             <span class="newsletter-category-pill">${escapeHtml(art.category)}</span>
@@ -728,14 +675,33 @@ function renderNewsletterView(articles) {
             <div class="newsletter-item-meta">
                 ${escapeHtml(art.author || "Editorial Staff")} • ${escapeHtml(art.published_date || "Today")} • ${art.read_time} min read
             </div>
+            
+            <p class="newsletter-item-deck" style="font-family: var(--font-headline); font-size: 1.1rem; font-weight: 600; color: var(--ink-primary); margin-bottom: 0.75rem;">
+                ${escapeHtml(art.deck)}
+            </p>
+
             <div class="newsletter-item-prose">
-                <p>${escapeHtml(art.text.slice(0, 450))}...</p>
+                <p><strong>Executive Synthesis:</strong> ${escapeHtml(art.summary)}</p>
             </div>
+
+            ${art.takeaways && art.takeaways.length > 0 ? `
+                <div style="background-color: var(--bg-paper-alt); border-left: 3px solid var(--ink-accent); padding: 0.85rem 1rem; border-radius: var(--border-radius-sm); margin: 1rem 0;">
+                    <strong style="font-family: var(--font-sans); font-size: 0.82rem; text-transform: uppercase; color: var(--ink-accent); display: block; margin-bottom: 0.4rem;">
+                        Key Takeaways:
+                    </strong>
+                    <ul style="padding-left: 1.25rem; font-size: 0.92rem; color: var(--ink-secondary); line-height: 1.5;">
+                        ${art.takeaways.map(t => `<li>${escapeHtml(t)}</li>`).join('')}
+                    </ul>
+                </div>
+            ` : ''}
+
             <button type="button" class="newsletter-read-btn" onclick="openReaderModal('${art.id}')">
-                Read Full Dispatch <i data-lucide="arrow-right" style="width: 14px; height: 14px;"></i>
+                Read Full Extracted Dispatch <i data-lucide="arrow-right" style="width: 14px; height: 14px;"></i>
             </button>
         </article>
     `).join('');
+
+    lucide.createIcons();
 }
 
 // ==========================================================================
@@ -788,7 +754,6 @@ function initReaderModal() {
         ttsBtn.addEventListener('click', toggleTTS);
     }
 
-    // Keyboard ESC to close
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') closeReaderModal();
     });
@@ -804,7 +769,22 @@ function openReaderModal(articleId) {
     document.getElementById('modalSourceBadge').textContent = article.extraction_method || "Direct";
     
     const paragraphs = article.text.split('\n\n').filter(p => p.trim().length > 0);
-    const html = paragraphs.map(p => `<p>${escapeHtml(p)}</p>`).join('');
+    const html = `
+        <div style="background-color: var(--bg-paper-alt); border-left: 4px solid var(--accent-gold); padding: 1rem 1.25rem; margin-bottom: 1.5rem; border-radius: var(--border-radius-sm);">
+            <strong style="display: block; font-family: var(--font-sans); font-size: 0.85rem; text-transform: uppercase; color: var(--ink-primary); margin-bottom: 0.35rem;">
+                Executive Newsletter Summary:
+            </strong>
+            <p style="font-size: 1rem; line-height: 1.5; color: var(--ink-secondary); margin-bottom: 0.5rem;">
+                ${escapeHtml(article.summary)}
+            </p>
+            ${article.takeaways && article.takeaways.length > 0 ? `
+                <ul style="padding-left: 1.2rem; font-size: 0.9rem; color: var(--ink-muted);">
+                    ${article.takeaways.map(t => `<li>${escapeHtml(t)}</li>`).join('')}
+                </ul>
+            ` : ''}
+        </div>
+        ${paragraphs.map(p => `<p>${escapeHtml(p)}</p>`).join('')}
+    `;
     document.getElementById('modalText').innerHTML = html;
 
     const originalLink = document.getElementById('modalOriginalLink');
@@ -888,11 +868,11 @@ function initPrintAndCopy() {
     if (copyNlBtn) {
         copyNlBtn.addEventListener('click', () => {
             const formatted = state.articles.map(a => 
-                `📰 **${a.title}**\n*By ${a.author || "Staff"} | ${a.category}*\n\n${a.text.slice(0, 500)}...\n\n🔗 ${a.url}\n`
+                `📰 **${a.title}**\n*${a.category} | By ${a.author || "Staff"}*\n\n**Deck:** ${a.deck}\n\n**Executive Summary:**\n${a.summary}\n\n**Key Takeaways:**\n${(a.takeaways || []).map(t => `• ${t}`).join('\n')}\n\n🔗 ${a.url}\n`
             ).join('\n---\n\n');
 
             navigator.clipboard.writeText(formatted).then(() => {
-                showToast('Newsletter text copied to clipboard!');
+                showToast('Newsletter summary copied to clipboard!');
             });
         });
     }

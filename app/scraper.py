@@ -61,7 +61,10 @@ class ExtractionFailed(Exception):
 # User-Agent pool
 # ---------------------------------------------------------------------------
 
+_POLITE_UA = "BackstoryNewsReader/1.0 (+https://github.com/RiteshS18/uptodate; bot@backstory.internal)"
+
 _USER_AGENTS = [
+    _POLITE_UA,
     (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
         "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -126,11 +129,15 @@ HEADERS = _make_headers(_USER_AGENTS[0])
 
 async def _fetch_direct(url: str) -> str | None:
     """
-    Try every UA in random order. Returns HTML on first success,
-    or raises the last httpx.HTTPStatusError if all attempts return 403.
+    Try UAs in order or random order. If Wikimedia/Wikipedia, prioritize polite bot UA.
+    Returns HTML on first success, or raises the last httpx.HTTPStatusError if all attempts return 403.
     """
-    agents = _USER_AGENTS.copy()
-    random.shuffle(agents)
+    # Prioritize polite identifier for sites that require it (e.g. Wikipedia)
+    if "wikipedia.org" in url.lower() or "wikimedia.org" in url.lower():
+        agents = [_POLITE_UA] + [ua for ua in _USER_AGENTS if ua != _POLITE_UA]
+    else:
+        agents = _USER_AGENTS.copy()
+        random.shuffle(agents)
 
     last_exc: Exception | None = None
     for ua in agents:

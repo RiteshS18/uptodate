@@ -52,6 +52,7 @@ from app.scraper import (
     fetch_html,
     scrape_url,
 )
+from app.summarizer import generate_newsletter_digest
 
 logging.basicConfig(
     level=logging.INFO,
@@ -181,26 +182,37 @@ def _check_playwright_available() -> bool:
         502: {"model": ExtractionError, "description": "Site blocked requests or DNS failure."},
         504: {"model": ExtractionError, "description": "Request timed out fetching URL."},
     },
-    summary="Extract clean article text from a single URL",
+    summary="Extract clean article text and newsletter summary from a single URL",
     description=(
         "Fetches an article webpage using multi-strategy fallback "
-        "(direct -> Google Cache -> Wayback -> Playwright) and extracts "
-        "clean structured article text (Substack NEXT_DATA -> trafilatura -> BS4)."
+        "(direct -> Google Cache -> Wayback -> Playwright), extracts "
+        "clean structured article text (Substack NEXT_DATA -> trafilatura -> BS4), "
+        "and produces an executive newsletter summary with bullet takeaways."
     ),
 )
 async def extract(request: ExtractRequest):
     url_str = str(request.url)
     try:
         res = await scrape_url(url_str)
+        text = res.get("text", "")
+        digest = await generate_newsletter_digest(
+            text,
+            title=res.get("title"),
+            author=res.get("author")
+        )
         return ArticleResult(
             url=url_str,
             title=res.get("title"),
             author=res.get("author"),
             published_date=res.get("date"),
-            text=res.get("text", ""),
-            char_count=len(res.get("text", "")),
+            text=text,
+            char_count=len(text),
             extraction_method=res.get("extraction_method"),
             fetch_strategy=res.get("fetch_strategy"),
+            summary=digest.get("summary"),
+            deck=digest.get("deck"),
+            takeaways=digest.get("takeaways"),
+            category=digest.get("category"),
         )
     except ExtractionFailed as e:
         status_code = 422 if e.error_code == "no_content" else (504 if e.error_code == "timeout" else 502)
@@ -292,7 +304,7 @@ async def source_check(request: SourceCheckRequest):
     "/extract/batch",
     response_model=BatchExtractResponse,
     summary="Batch extract multiple article URLs in parallel",
-    description="Extracts clean text from a list of URLs concurrently up to max_concurrency workers.",
+    description="Extracts clean text and summaries from a list of URLs concurrently up to max_concurrency workers.",
 )
 async def extract_batch(request: BatchExtractRequest):
     semaphore = asyncio.Semaphore(request.max_concurrency)
@@ -301,15 +313,25 @@ async def extract_batch(request: BatchExtractRequest):
         async with semaphore:
             try:
                 res = await scrape_url(url_str)
+                text = res.get("text", "")
+                digest = await generate_newsletter_digest(
+                    text,
+                    title=res.get("title"),
+                    author=res.get("author")
+                )
                 return ArticleResult(
                     url=url_str,
                     title=res.get("title"),
                     author=res.get("author"),
                     published_date=res.get("date"),
-                    text=res.get("text", ""),
-                    char_count=len(res.get("text", "")),
+                    text=text,
+                    char_count=len(text),
                     extraction_method=res.get("extraction_method"),
                     fetch_strategy=res.get("fetch_strategy"),
+                    summary=digest.get("summary"),
+                    deck=digest.get("deck"),
+                    takeaways=digest.get("takeaways"),
+                    category=digest.get("category"),
                 )
             except ExtractionFailed as e:
                 err_code = ErrorCode(e.error_code) if e.error_code in [m.value for m in ErrorCode] else ErrorCode.parse_error
@@ -317,6 +339,12 @@ async def extract_batch(request: BatchExtractRequest):
                     url=url_str,
                     error_code=err_code,
                     detail=e.detail,
+                )
+            except Exception as e:
+                return ExtractionError(
+                    url=url_str,
+                    error_code=ErrorCode.parse_error,
+                    detail=str(e),
                 )
             except Exception as e:
                 return ExtractionError(

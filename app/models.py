@@ -63,6 +63,10 @@ class ArticleResult(BaseModel):
     char_count:        int                        = Field(..., description="Character count of the extracted text.")
     extraction_method: Optional[ExtractionMethod] = Field(None, description="Which extraction strategy produced the text.")
     fetch_strategy:    Optional[FetchStrategy]    = Field(None, description="Which fetch strategy obtained the HTML.")
+    summary:           Optional[str]              = Field(None, description="Executive summary of the article.")
+    deck:              Optional[str]              = Field(None, description="Punchy sub-headline or deck.")
+    takeaways:         Optional[list[str]]        = Field(None, description="Key bullet takeaways for newsletter format.")
+    category:          Optional[str]              = Field(None, description="Classified category topic.")
 
 
 class ExtractionError(BaseModel):
