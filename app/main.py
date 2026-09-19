@@ -92,8 +92,8 @@ async def lifespan(app: FastAPI):
     """Ensure database schema is initialized and background refresh scheduler starts."""
     logger.info("Initializing database schema...")
     await init_db()
-    # Start automated 30-minute background source refresh cron
-    start_scheduler(interval_minutes=30)
+    # Start automated 24-hour background source refresh cron
+    start_scheduler(interval_hours=24)
     yield
     shutdown_scheduler()
     logger.info("Application shutdown.")

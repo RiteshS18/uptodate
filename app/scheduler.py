@@ -28,6 +28,7 @@ def get_scheduler_status() -> dict:
     return {
         "running": bool(_scheduler and _scheduler.running),
         "is_refreshing": _is_refreshing,
+        "interval": "24 hours",
         "last_refresh_at": _last_refresh_time.isoformat() if _last_refresh_time else None,
         "last_stats": _last_refresh_stats,
     }
@@ -94,21 +95,28 @@ async def refresh_all_sources(limit_per_source: int = 4) -> dict:
         _is_refreshing = False
 
 
-def start_scheduler(interval_minutes: int = 30) -> None:
-    """Start the background scheduler task."""
+def start_scheduler(interval_hours: int = 24, interval_minutes: int | None = None) -> None:
+    """Start the background scheduler task (defaults to 24-hour interval update)."""
     global _scheduler
     if _scheduler is None:
         _scheduler = AsyncIOScheduler()
+        if interval_minutes:
+            trigger = IntervalTrigger(minutes=interval_minutes)
+            interval_desc = f"{interval_minutes} mins"
+        else:
+            trigger = IntervalTrigger(hours=interval_hours)
+            interval_desc = f"{interval_hours} hours"
+
         _scheduler.add_job(
             refresh_all_sources,
-            trigger=IntervalTrigger(minutes=interval_minutes),
+            trigger=trigger,
             id="backstory_source_refresh",
             replace_existing=True,
             coalesce=True,
             max_instances=1,
         )
         _scheduler.start()
-        logger.info("Background source refresh scheduler started (interval: %d mins).", interval_minutes)
+        logger.info("Background source refresh scheduler started (interval: %s).", interval_desc)
 
 
 def shutdown_scheduler() -> None:
