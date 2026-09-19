@@ -666,7 +666,7 @@ function renderFollowedSourcesList() {
                     </div>
                     <span class="source-item-url">${escapeHtml(src.url)}</span>
                 </div>
-                <button type="button" class="source-item-del" onclick="deleteFollowedSource(${src.id})" title="Delete source">
+                <button type="button" class="source-item-del" onclick="deleteFollowedSource('${src.id}')" title="Delete source">
                     <i data-lucide="trash-2" style="width: 15px; height: 15px;"></i>
                 </button>
             </div>
@@ -1371,3 +1371,8 @@ function escapeHtml(str) {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
 }
+
+// Expose handlers for dynamic inline HTML events
+window.deleteFollowedSource = deleteFollowedSource;
+window.openReaderModal = openReaderModal;
+
