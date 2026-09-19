@@ -83,6 +83,7 @@ scheduler = AsyncIOScheduler()
 async def refresh_all_sources() -> dict:
     """Check every stored source for new items. Called by both cron and manual trigger."""
     sources = await get_all_sources()
+    logger.info("⏱️ Scheduled refresh started for %d source(s)...", len(sources))
     results = {}
     for source in sources:
         source_dict = {
@@ -96,9 +97,11 @@ async def refresh_all_sources() -> dict:
         try:
             items = await fetch_new_items(source_dict)
             results[source["url"]] = len(items)
+            logger.info("  ✓ Source %s: %d new item(s)", source["url"], len(items))
         except Exception as e:
             logger.error("Scheduled refresh failed for %s: %s", source["url"], e)
             results[source["url"]] = "error"
+    logger.info("⏱️ Scheduled refresh completed: %s", results)
     return results
 
 
@@ -110,7 +113,7 @@ async def refresh_all_sources() -> dict:
 async def lifespan(app: FastAPI):
     logger.info("Initializing database schema...")
     await init_db()
-    scheduler.add_job(refresh_all_sources, "interval", minutes=30, id="refresh_all")
+    scheduler.add_job(refresh_all_sources, "interval", minutes=1, id="refresh_all")
     scheduler.start()
     yield
     scheduler.shutdown()
@@ -642,10 +645,11 @@ async def scheduler_status_endpoint():
     """Returns the background refresh schedule status, job details, and running state."""
     job = scheduler.get_job("refresh_all")
     next_run = job.next_run_time.isoformat() if job and job.next_run_time else None
+    trigger_str = str(job.trigger) if job else "not configured"
     return {
         "running": bool(scheduler.running),
         "job_id": "refresh_all",
-        "interval": "30 minutes",
+        "trigger": trigger_str,
         "next_run_time": next_run,
     }
 

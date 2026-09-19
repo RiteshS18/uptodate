@@ -245,5 +245,5 @@ def test_scheduler_status(client):
     assert response.status_code == 200
     data = response.json()
     assert "running" in data
-    assert data["interval"] == "30 minutes"
     assert data["job_id"] == "refresh_all"
+    assert "trigger" in data
