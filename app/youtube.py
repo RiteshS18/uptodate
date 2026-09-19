@@ -159,7 +159,7 @@ def get_channel_rss_url(channel_id: str) -> str:
 async def fetch_video_metadata(video_id: str) -> dict:
     """
     Fetch public metadata for a YouTube video via oEmbed and page scrape fallback.
-    Returns: {video_id, title, author, url, thumbnail_url, published_date}
+    Returns: {video_id, title, author, url, thumbnail_url, published_date, description}
     """
     video_url = f"https://www.youtube.com/watch?v={video_id}"
     oembed_url = f"https://www.youtube.com/oembed?url={video_url}&format=json"
@@ -171,6 +171,7 @@ async def fetch_video_metadata(video_id: str) -> dict:
         "author": "YouTube Creator",
         "thumbnail_url": f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg",
         "published_date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        "description": "",
     }
 
     try:
@@ -183,6 +184,25 @@ async def fetch_video_metadata(video_id: str) -> dict:
                 meta["thumbnail_url"] = data.get("thumbnail_url") or meta["thumbnail_url"]
     except Exception as exc:
         logger.debug("oEmbed metadata fetch failed for %s: %s", video_id, exc)
+
+    # Scrape page HTML for description if available
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept-Language": "en-US,en;q=0.9",
+        }
+        async with httpx.AsyncClient(timeout=8.0, follow_redirects=True, headers=headers) as client:
+            resp = await client.get(video_url)
+            if resp.status_code == 200:
+                soup = BeautifulSoup(resp.text, "html.parser")
+                desc_tag = soup.find("meta", {"name": "description"}) or soup.find("meta", {"property": "og:description"})
+                if desc_tag and desc_tag.get("content"):
+                    meta["description"] = desc_tag["content"].strip()
+                title_tag = soup.find("meta", {"property": "og:title"})
+                if title_tag and title_tag.get("content"):
+                    meta["title"] = title_tag["content"].replace(" - YouTube", "").strip()
+    except Exception as exc:
+        logger.debug("Page scrape fallback failed for %s: %s", video_id, exc)
 
     return meta
 
@@ -202,7 +222,7 @@ def clean_transcript(raw_text: str) -> str:
 
 def get_youtube_captions(video_id: str) -> tuple[str, str]:
     """
-    Fetch subtitles/captions using youtube-transcript-api.
+    Fetch subtitles/captions using youtube-transcript-api with auto-translation support.
     Returns (raw_text, clean_text).
     Raises TranscriptUnavailable if captions are disabled or unavailable.
     """
@@ -226,7 +246,15 @@ def get_youtube_captions(video_id: str) -> tuple[str, str]:
                         tr = t
                         break
             if tr:
-                segs = tr.fetch()
+                try:
+                    # Auto-translate non-English tracks if translatable
+                    lang = getattr(tr, "language_code", "")
+                    if lang and not lang.startswith("en") and getattr(tr, "is_translatable", False):
+                        segs = tr.translate("en").fetch()
+                    else:
+                        segs = tr.fetch()
+                except Exception:
+                    segs = tr.fetch()
             else:
                 segs = YouTubeTranscriptApi.get_transcript(video_id, languages=["en"])
         else:
@@ -245,7 +273,7 @@ def get_youtube_captions(video_id: str) -> tuple[str, str]:
                 parts.append(getattr(s, "text", ""))
 
         raw_text = " ".join(parts).strip()
-        if not raw_text or len(raw_text) < 40:
+        if not raw_text or len(raw_text) < 30:
             raise TranscriptUnavailable("Transcript returned empty text.")
 
         return raw_text, clean_transcript(raw_text)
@@ -276,6 +304,7 @@ def transcribe_video_audio(video_id: str, max_seconds: int = 600) -> tuple[str, 
         "max_filesize": 150 * 1024 * 1024,
         "retries": 2,
         "socket_timeout": 25,
+        "extractor_args": {"youtube": {"player_client": ["android", "web"]}},
     }
     if max_seconds and max_seconds > 0:
         options["download_ranges"] = lambda info, ydl: [{"start_time": 0, "end_time": max_seconds}]
@@ -297,7 +326,7 @@ def transcribe_video_audio(video_id: str, max_seconds: int = 600) -> tuple[str, 
             model = WhisperModel("base", device="cpu", compute_type="int8")
             segments, _ = model.transcribe(audio_path, vad_filter=True, beam_size=1)
             raw_text = " ".join(seg.text.strip() for seg in segments if seg.text).strip()
-            if raw_text and len(raw_text) > 40:
+            if raw_text and len(raw_text) > 30:
                 return raw_text, clean_transcript(raw_text)
         except ImportError:
             pass
@@ -318,7 +347,7 @@ def transcribe_video_audio(video_id: str, max_seconds: int = 600) -> tuple[str, 
                         response_format="text",
                     )
                 raw_text = transcript_resp.strip() if isinstance(transcript_resp, str) else transcript_resp.text.strip()
-                if raw_text and len(raw_text) > 40:
+                if raw_text and len(raw_text) > 30:
                     return raw_text, clean_transcript(raw_text)
             except Exception as exc:
                 logger.warning("OpenAI Whisper API transcription failed: %s", exc)
@@ -335,8 +364,8 @@ async def extract_youtube_content(url_or_video_id: str) -> dict:
     """
     Full YouTube extraction cascade:
     1. Extract Video ID.
-    2. Fetch Video Metadata (Title, Author, Thumbnail).
-    3. Fetch Transcript (Captions first -> STT audio fallback).
+    2. Fetch Video Metadata (Title, Author, Thumbnail, Description).
+    3. Fetch Transcript (Captions first -> STT audio fallback -> Metadata fallback).
     
     Returns structured dict:
     {
@@ -346,7 +375,7 @@ async def extract_youtube_content(url_or_video_id: str) -> dict:
         "published_date": published_date,
         "thumbnail_url": thumbnail_url,
         "text": clean_transcript_text,
-        "extraction_method": "youtube_captions" | "youtube_whisper_stt",
+        "extraction_method": "youtube_captions" | "youtube_whisper_stt" | "youtube_metadata",
         "fetch_strategy": "direct",
     }
     """
@@ -357,6 +386,8 @@ async def extract_youtube_content(url_or_video_id: str) -> dict:
     meta = await fetch_video_metadata(video_id)
 
     # Step 1: Try YouTube captions
+    clean_text = None
+    method = None
     try:
         _, clean_text = get_youtube_captions(video_id)
         method = "youtube_captions"
@@ -366,8 +397,16 @@ async def extract_youtube_content(url_or_video_id: str) -> dict:
         try:
             _, clean_text = transcribe_video_audio(video_id)
             method = "youtube_whisper_stt"
-        except TranscriptUnavailable as stt_err:
-            raise TranscriptUnavailable(f"All transcript strategies failed for {video_id}: {stt_err}") from stt_err
+        except Exception as stt_err:
+            logger.info("Audio STT unavailable for %s (%s) — using metadata & description fallback.", video_id, stt_err)
+            # Step 3: Description / Metadata fallback
+            desc = meta.get("description", "").strip()
+            if desc and len(desc) > 30:
+                clean_text = f"{meta['title']}\n\n{desc}"
+                method = "youtube_description"
+            else:
+                clean_text = f"Video dispatch by {meta['author']}: {meta['title']}."
+                method = "youtube_metadata"
 
     return {
         "url": meta["url"],
