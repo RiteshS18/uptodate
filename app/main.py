@@ -45,11 +45,13 @@ from app.models import (
     SourceCheckRequest,
     SourceCheckResponse,
 )
+from app.noise_filter import noise_filter
 from app.scraper import (
     ExtractionFailed,
     _extract_substack,
     _extract_with_trafilatura,
     fetch_html,
+    is_listing_page,
     scrape_url,
 )
 from app.summarizer import generate_newsletter_digest
@@ -121,21 +123,33 @@ async def serve_index():
 # ---------------------------------------------------------------------------
 
 def _collect_article_links(html: str, base_url: str) -> list[str]:
-    """Extract unique article-like links from a webpage HTML."""
+    """Extract unique article-like links from a webpage HTML, prioritizing primary section content."""
     base_domain = urlparse(base_url).netloc
     soup = BeautifulSoup(html, "html.parser")
+
+    # Strip navigation header and footer chrome so we only discover main content articles
+    for chrome_tag in soup(["header", "nav", "footer", "aside"]):
+        chrome_tag.decompose()
+
     seen: set[str] = set()
-    links: list[str] = []
+    section_links: list[str] = []
+    other_links: list[str] = []
+
+    parsed_base = urlparse(base_url)
+    base_subpath = parsed_base.path.strip("/").split("/")[0] if parsed_base.path.strip("/") else ""
 
     for a in soup.find_all("a", href=True):
         href = urljoin(base_url, a["href"])
         parsed = urlparse(href)
         normalized = f"{parsed.scheme}://{parsed.netloc}{parsed.path.rstrip('/')}"
-        if normalized not in seen and is_article_link(href, base_domain):
+        if normalized not in seen and normalized != base_url.rstrip("/") and is_article_link(href, base_domain):
             seen.add(normalized)
-            links.append(normalized)
+            if base_subpath and base_subpath in parsed.path:
+                section_links.append(normalized)
+            else:
+                other_links.append(normalized)
 
-    return links
+    return section_links + other_links
 
 
 async def _scrape_one_legacy(url: str) -> LegacyArticleResult | None:
@@ -174,6 +188,132 @@ def _check_playwright_available() -> bool:
 # POST /extract — Single URL Extraction
 # ---------------------------------------------------------------------------
 
+async def _scrape_and_process_article(url_str: str) -> ArticleResult:
+    """
+    Run full single-article extraction, noise-filtering, and newsletter summarization.
+    If the URL is a listing/hub/category page, discovers sub-articles, extracts and
+    summarizes each individually, and returns an ArticleResult containing the list.
+    """
+    res = await scrape_url(url_str)
+
+    # 1. Listing / Category Hub page handling
+    if res.get("is_listing"):
+        html = res.get("html", "")
+        article_links = _collect_article_links(html, url_str)
+        if not article_links:
+            raise ExtractionFailed(
+                "no_content",
+                f"Listing/category page detected at {url_str}, but could not find article links."
+            )
+
+        # Limit to top 8 articles from the hub
+        target_links = article_links[:8]
+        semaphore = asyncio.Semaphore(4)
+
+        async def _process_sub(link: str) -> ArticleResult | None:
+            async with semaphore:
+                try:
+                    sub_res = await scrape_url(link)
+                    if sub_res.get("is_listing"):
+                        return None
+                    sub_text = sub_res.get("text", "").strip()
+                    sub_title = sub_res.get("title")
+                    passed, _ = await noise_filter(sub_text, sub_title)
+                    if not passed:
+                        return None
+                    digest = await generate_newsletter_digest(
+                        sub_text,
+                        title=sub_title,
+                        author=sub_res.get("author"),
+                    )
+                    return ArticleResult(
+                        url=link,
+                        title=sub_title,
+                        author=sub_res.get("author"),
+                        published_date=sub_res.get("date"),
+                        text=sub_text,
+                        char_count=len(sub_text),
+                        extraction_method=sub_res.get("extraction_method"),
+                        fetch_strategy=sub_res.get("fetch_strategy"),
+                        summary=digest.get("summary"),
+                        deck=digest.get("deck"),
+                        takeaways=digest.get("takeaways"),
+                        category=digest.get("category"),
+                        is_listing=False,
+                        article_count=1,
+                    )
+                except Exception as exc:
+                    logger.warning("Failed to extract sub-article %s: %s", link, exc)
+                    return None
+
+        results = await asyncio.gather(*[_process_sub(l) for l in target_links])
+        valid_articles = [a for a in results if a is not None]
+
+        if not valid_articles:
+            raise ExtractionFailed(
+                "no_content",
+                f"Discovered {len(target_links)} links on listing page {url_str}, but none yielded readable text."
+            )
+
+        lead = valid_articles[0]
+        return ArticleResult(
+            url=url_str,
+            title=f"{lead.category or 'Category'} Dispatch: {len(valid_articles)} Top Stories",
+            author="Editorial Wire",
+            published_date=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+            text=lead.text,
+            char_count=sum(a.char_count for a in valid_articles),
+            extraction_method=lead.extraction_method,
+            fetch_strategy=res.get("fetch_strategy", "direct"),
+            summary=f"Curated {len(valid_articles)} separate stories from {urlparse(url_str).netloc}. Each story has been extracted and summarized independently.",
+            deck=f"Top story: {lead.title}",
+            takeaways=[f"{a.title}: {a.deck or (a.summary[:100] if a.summary else '')}" for a in valid_articles[:4]],
+            category=lead.category or "General Dispatch",
+            is_listing=True,
+            article_count=len(valid_articles),
+            articles=valid_articles,
+        )
+
+    # 2. Single article handling
+    text = res.get("text", "").strip()
+    title = res.get("title")
+
+    # Noise filter check
+    passed, filter_reason = await noise_filter(text, title)
+    if not passed:
+        logger.info("Filtered article %s: %s", url_str, filter_reason)
+        raise ExtractionFailed("no_content", f"Article filtered as noise: {filter_reason}")
+
+    digest = await generate_newsletter_digest(
+        text,
+        title=title,
+        author=res.get("author"),
+    )
+
+    art = ArticleResult(
+        url=url_str,
+        title=title,
+        author=res.get("author"),
+        published_date=res.get("date"),
+        text=text,
+        char_count=len(text),
+        extraction_method=res.get("extraction_method"),
+        fetch_strategy=res.get("fetch_strategy"),
+        summary=digest.get("summary"),
+        deck=digest.get("deck"),
+        takeaways=digest.get("takeaways"),
+        category=digest.get("category"),
+        is_listing=False,
+        article_count=1,
+        articles=None,
+    )
+    return art
+
+
+# ---------------------------------------------------------------------------
+# POST /extract — Single URL Extraction (with Listing/Hub Page Auto-Split)
+# ---------------------------------------------------------------------------
+
 @app.post(
     "/extract",
     response_model=ArticleResult,
@@ -182,38 +322,16 @@ def _check_playwright_available() -> bool:
         502: {"model": ExtractionError, "description": "Site blocked requests or DNS failure."},
         504: {"model": ExtractionError, "description": "Request timed out fetching URL."},
     },
-    summary="Extract clean article text and newsletter summary from a single URL",
+    summary="Extract clean article text and newsletter summary from a URL or listing page",
     description=(
-        "Fetches an article webpage using multi-strategy fallback "
-        "(direct -> Google Cache -> Wayback -> Playwright), extracts "
-        "clean structured article text (Substack NEXT_DATA -> trafilatura -> BS4), "
-        "and produces an executive newsletter summary with bullet takeaways."
+        "Fetches a webpage, detects if it is a listing/hub page or a single article, "
+        "extracts clean structured text, and produces individual newsletter summaries."
     ),
 )
 async def extract(request: ExtractRequest):
     url_str = str(request.url)
     try:
-        res = await scrape_url(url_str)
-        text = res.get("text", "")
-        digest = await generate_newsletter_digest(
-            text,
-            title=res.get("title"),
-            author=res.get("author")
-        )
-        return ArticleResult(
-            url=url_str,
-            title=res.get("title"),
-            author=res.get("author"),
-            published_date=res.get("date"),
-            text=text,
-            char_count=len(text),
-            extraction_method=res.get("extraction_method"),
-            fetch_strategy=res.get("fetch_strategy"),
-            summary=digest.get("summary"),
-            deck=digest.get("deck"),
-            takeaways=digest.get("takeaways"),
-            category=digest.get("category"),
-        )
+        return await _scrape_and_process_article(url_str)
     except ExtractionFailed as e:
         status_code = 422 if e.error_code == "no_content" else (504 if e.error_code == "timeout" else 502)
         err_code = ErrorCode(e.error_code) if e.error_code in [m.value for m in ErrorCode] else ErrorCode.parse_error
@@ -312,39 +430,13 @@ async def extract_batch(request: BatchExtractRequest):
     async def _extract_single(url_str: str) -> ArticleResult | ExtractionError:
         async with semaphore:
             try:
-                res = await scrape_url(url_str)
-                text = res.get("text", "")
-                digest = await generate_newsletter_digest(
-                    text,
-                    title=res.get("title"),
-                    author=res.get("author")
-                )
-                return ArticleResult(
-                    url=url_str,
-                    title=res.get("title"),
-                    author=res.get("author"),
-                    published_date=res.get("date"),
-                    text=text,
-                    char_count=len(text),
-                    extraction_method=res.get("extraction_method"),
-                    fetch_strategy=res.get("fetch_strategy"),
-                    summary=digest.get("summary"),
-                    deck=digest.get("deck"),
-                    takeaways=digest.get("takeaways"),
-                    category=digest.get("category"),
-                )
+                return await _scrape_and_process_article(url_str)
             except ExtractionFailed as e:
                 err_code = ErrorCode(e.error_code) if e.error_code in [m.value for m in ErrorCode] else ErrorCode.parse_error
                 return ExtractionError(
                     url=url_str,
                     error_code=err_code,
                     detail=e.detail,
-                )
-            except Exception as e:
-                return ExtractionError(
-                    url=url_str,
-                    error_code=ErrorCode.parse_error,
-                    detail=str(e),
                 )
             except Exception as e:
                 return ExtractionError(

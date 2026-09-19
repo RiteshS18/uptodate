@@ -327,8 +327,10 @@ async def fetch_html(url: str) -> tuple[str, str]:
         if html:
             return html, "direct"
     except httpx.HTTPStatusError as e:
+        if e.response.status_code == 404:
+            raise ExtractionFailed("no_content", f"Page returned 404 Not Found for {url}") from e
         if e.response.status_code != 403:
-            raise
+            raise ExtractionFailed("fetch_blocked", f"Site returned HTTP {e.response.status_code} for {url}") from e
         logger.info("Direct fetch 403 for %s — trying fallbacks…", url)
     except httpx.TimeoutException as e:
         raise ExtractionFailed(
@@ -340,7 +342,7 @@ async def fetch_html(url: str) -> tuple[str, str]:
             raise ExtractionFailed(
                 "dns_error", f"DNS resolution failed for {url}: {e}"
             ) from e
-        raise
+        raise ExtractionFailed("fetch_blocked", f"Connection error fetching {url}: {e}") from e
 
     # 2. Google Cache
     html = await _fetch_google_cache(url)
@@ -560,6 +562,8 @@ async def scrape_url(url: str) -> dict:
         text              – str  (always >= _MIN_TEXT_CHARS when successful)
         extraction_method – str  ('substack_next_data' | 'trafilatura' | 'bs4_fallback')
         fetch_strategy    – str  ('direct' | 'google_cache' | 'wayback' | 'playwright')
+        is_listing        – bool (True if the page is a category/hub/listing page)
+        html              – str or None (preserved for listing link discovery)
 
     Raises:
         ExtractionFailed: if all fetch strategies fail (error_code 'fetch_blocked',
@@ -567,6 +571,19 @@ async def scrape_url(url: str) -> dict:
                           yield < _MIN_TEXT_CHARS chars (error_code 'no_content').
     """
     html, fetch_strategy = await fetch_html(url)
+
+    # 0. Check if the page is a listing / hub / category index page
+    if is_listing_page(html, url):
+        return {
+            "title": None,
+            "author": None,
+            "date": None,
+            "text": "",
+            "is_listing": True,
+            "html": html,
+            "extraction_method": "listing_detector",
+            "fetch_strategy": fetch_strategy,
+        }
 
     # 1. Substack-specific extraction
     substack_result = _extract_substack(html)
@@ -614,3 +631,62 @@ async def scrape_url(url: str) -> dict:
         "extraction_method": extraction_method,
         "fetch_strategy":    fetch_strategy,
     }
+
+
+# ---------------------------------------------------------------------------
+# Listing / Category / Hub Page Detection
+# ---------------------------------------------------------------------------
+
+def is_listing_page(html: str, url: str) -> bool:
+    """
+    Detect whether a page is a listing, hub, or category index page (rather than a single article).
+
+    Heuristics:
+    1. Link density (ratio of anchor-tag text to total visible text).
+    2. Count of standalone headline links (links containing headings or article-like titles).
+    3. Absence of continuous body prose paragraphs.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    for tag in soup(["script", "style", "noscript", "nav", "footer", "header", "aside"]):
+        tag.decompose()
+
+    all_text = soup.get_text(strip=True)
+    if not all_text:
+        return False
+
+    links = soup.find_all("a", href=True)
+
+    # Check for standalone headline links (links containing headings or title-like text not embedded in paragraphs)
+    headline_links = set()
+    for a in links:
+        txt = a.get_text(strip=True)
+        has_heading = bool(a.find(["h1", "h2", "h3", "h4", "h5", "h6"]))
+        is_title_like = len(txt) > 25 and " " in txt
+        if (has_heading or is_title_like) and not a.find_parent("p"):
+            headline_links.add(a["href"])
+
+    # Count distinct prose paragraphs with substantial content (> 120 chars)
+    long_paragraphs = [
+        p.get_text(strip=True)
+        for p in soup.find_all("p")
+        if len(p.get_text(strip=True)) > 120 and len(p.find_all("a")) <= 4
+    ]
+
+    # Calculate link text density
+    link_text = "".join([a.get_text(strip=True) for a in links])
+    link_density = len(link_text) / max(1, len(all_text))
+
+    # If the page has extensive continuous prose and few standalone headline cards, it is an article
+    if len(long_paragraphs) >= 4 and len(headline_links) < 15 and link_density < 0.45:
+        return False
+
+    # If the page has many standalone headline cards and very few body paragraphs, it is a listing page
+    if len(headline_links) >= 6 and len(long_paragraphs) <= 3:
+        return True
+
+    # High link density indicates index/hub/category pages
+    if link_density > 0.50 and len(long_paragraphs) <= 2:
+        return True
+
+    return False
+

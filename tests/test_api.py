@@ -30,7 +30,7 @@ def test_post_extract_success(client):
         "title": "Test Title",
         "author": "Jane Doe",
         "date": "2026-05-01",
-        "text": "This is a sufficiently long extracted article text containing substantive paragraphs of content.",
+        "text": "This is a sufficiently long extracted article text containing substantive paragraphs of content with in-depth analysis and insightful reporting on modern technological advances across multiple industries.",
         "extraction_method": "trafilatura",
         "fetch_strategy": "direct",
     }
@@ -98,7 +98,7 @@ def test_post_batch_extract(client):
             "title": "Success Title",
             "author": "Author",
             "date": "2026-01-01",
-            "text": "Valid body text exceeding minimum threshold requirements.",
+            "text": "Valid body text exceeding minimum threshold requirements with substantial analysis, comprehensive background context, and clear takeaways for the readership.",
             "extraction_method": "trafilatura",
             "fetch_strategy": "direct",
         }
@@ -121,3 +121,48 @@ def test_post_batch_extract(client):
     assert data["success_count"] == 2
     assert data["failure_count"] == 1
     assert len(data["results"]) == 3
+
+
+def test_post_extract_listing_page(client):
+    listing_html = """
+    <html>
+      <body>
+        <h1>Web Series Listing</h1>
+        <div><a href="https://example.com/entertainment/emily-in-paris-season-5-review-article-12345678">Emily in Paris Season 5 Review</a></div>
+        <div><a href="https://example.com/entertainment/indias-got-latent-episode-2-review-article-87654321">India's Got Latent 2</a></div>
+        <div><a href="https://example.com/entertainment/the-early-spring-trailer-breakdown-article-99999999">The Early Spring Breakdown</a></div>
+      </body>
+    </html>
+    """
+    async def mock_scrape(url):
+        if url == "https://example.com/entertainment/web-series":
+            return {
+                "title": None,
+                "author": None,
+                "date": None,
+                "text": "",
+                "is_listing": True,
+                "html": listing_html,
+                "extraction_method": "listing_detector",
+                "fetch_strategy": "direct",
+            }
+        return {
+            "title": f"Story: {url.split('/')[-1]}",
+            "author": "Staff Reviewer",
+            "date": "2026-09-19",
+            "text": "A full-length substantive critique with multiple comprehensive paragraphs of analysis detailing the narrative arc, directing style, cinematography, and performances across the season.",
+            "extraction_method": "trafilatura",
+            "fetch_strategy": "direct",
+        }
+
+    with patch("app.main.scrape_url", side_effect=mock_scrape):
+        response = client.post("/extract", json={"url": "https://example.com/entertainment/web-series"})
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["is_listing"] is True
+    assert data["article_count"] >= 3
+    assert len(data["articles"]) >= 3
+    for art in data["articles"]:
+        assert art["url"].startswith("https://example.com/entertainment/")
+        assert art["summary"] is not None

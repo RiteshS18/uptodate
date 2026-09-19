@@ -7,6 +7,7 @@ wasting OpenAI tokens on teasers, ads, and link-only posts.
 """
 
 import logging
+import os
 import re
 
 from app.embeddings import get_client
@@ -80,6 +81,10 @@ async def _llm_classify(text: str, title: str | None) -> tuple[bool, str | None]
 
     Returns (passed, reason).
     """
+    api_key = os.environ.get("OPENAI_API_KEY", "")
+    if not api_key or "your_openai_api_key_here" in api_key or not api_key.startswith("sk-"):
+        return True, None
+
     user_msg = ""
     if title:
         user_msg += f"Title: {title}\n\n"

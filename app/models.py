@@ -55,18 +55,21 @@ class ExtractRequest(BaseModel):
 
 
 class ArticleResult(BaseModel):
-    url:               str                        = Field(..., description="Canonical URL that was scraped.")
-    title:             Optional[str]              = Field(None, description="Article title (None if not found).")
-    author:            Optional[str]              = Field(None, description="Byline / author name.")
-    published_date:    Optional[str]              = Field(None, description="Publication date in ISO-8601 format when available.")
-    text:              str                        = Field(..., description="Full extracted article text, cleaned of boilerplate.")
-    char_count:        int                        = Field(..., description="Character count of the extracted text.")
-    extraction_method: Optional[ExtractionMethod] = Field(None, description="Which extraction strategy produced the text.")
-    fetch_strategy:    Optional[FetchStrategy]    = Field(None, description="Which fetch strategy obtained the HTML.")
-    summary:           Optional[str]              = Field(None, description="Executive summary of the article.")
-    deck:              Optional[str]              = Field(None, description="Punchy sub-headline or deck.")
-    takeaways:         Optional[list[str]]        = Field(None, description="Key bullet takeaways for newsletter format.")
-    category:          Optional[str]              = Field(None, description="Classified category topic.")
+    url:               str                           = Field(..., description="Canonical URL that was scraped.")
+    title:             Optional[str]                 = Field(None, description="Article title (None if not found).")
+    author:            Optional[str]                 = Field(None, description="Byline / author name.")
+    published_date:    Optional[str]                 = Field(None, description="Publication date in ISO-8601 format when available.")
+    text:              str                           = Field(..., description="Full extracted article text, cleaned of boilerplate.")
+    char_count:        int                           = Field(..., description="Character count of the extracted text.")
+    extraction_method: Optional[ExtractionMethod]    = Field(None, description="Which extraction strategy produced the text.")
+    fetch_strategy:    Optional[FetchStrategy]       = Field(None, description="Which fetch strategy obtained the HTML.")
+    summary:           Optional[str]                 = Field(None, description="Executive summary of the article.")
+    deck:              Optional[str]                 = Field(None, description="Punchy sub-headline or deck.")
+    takeaways:         Optional[list[str]]           = Field(None, description="Key bullet takeaways for newsletter format.")
+    category:          Optional[str]                 = Field(None, description="Classified category topic.")
+    is_listing:        Optional[bool]                = Field(False, description="True if this URL was detected as a category/hub listing page.")
+    article_count:     Optional[int]                 = Field(1, description="Number of articles contained in this result.")
+    articles:          Optional[list[ArticleResult]] = Field(None, description="List of individual extracted articles if this was a listing page.")
 
 
 class ExtractionError(BaseModel):

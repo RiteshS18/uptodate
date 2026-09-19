@@ -28,7 +28,7 @@ def get_client() -> OpenAI:
             raise RuntimeError(
                 "OPENAI_API_KEY is not set. Add it to your .env file."
             )
-        _client = OpenAI(api_key=api_key)
+        _client = OpenAI(api_key=api_key, max_retries=0)
     return _client
 
 

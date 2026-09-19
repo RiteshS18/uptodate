@@ -97,16 +97,16 @@ def _extractive_summarize(text: str, max_sentences: int = 4) -> dict:
 
     # Classify category
     lower_text = cleaned.lower()
-    if any(k in lower_text for k in ["ai", "model", "neural", "software", "algorithm", "gpu", "chip", "tech"]):
-        category = "Technology & AI"
+    if any(k in lower_text for k in ["entertainment", "web series", "series", "episode", "season", "show", "ott", "netflix", "drama", "actor", "actress", "film", "movie", "trailer", "roast", "comic", "superhero", "oscars", "bollywood"]):
+        category = "Entertainment & Media"
     elif any(k in lower_text for k in ["church", "faith", "worship", "sacred", "pastor", "prayer", "spiritual"]):
         category = "Faith & Community"
+    elif any(k in lower_text for k in ["ai", "model", "neural", "software", "algorithm", "gpu", "chip", "tech", "computing"]):
+        category = "Technology & AI"
     elif any(k in lower_text for k in ["market", "economy", "stock", "dollar", "trade", "inflation", "bank", "fund"]):
         category = "Economy & Markets"
     elif any(k in lower_text for k in ["climate", "treaty", "energy", "accord", "summit", "nation", "diplomat"]):
         category = "Global Affairs"
-    elif any(k in lower_text for k in ["comic", "batman", "superhero", "film", "movie", "book", "entertainment"]):
-        category = "Comics & Entertainment"
     elif any(k in lower_text for k in ["culture", "philosophy", "history", "art", "music", "essay"]):
         category = "Culture & Philosophy"
     else:

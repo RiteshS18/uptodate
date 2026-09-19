@@ -36,7 +36,9 @@ _SKIP_SEGMENTS = {
     "search", "tag", "tags", "category", "categories", "author", "authors",
     "page", "cart", "checkout", "account", "faq", "help", "sitemap",
     "subscribe", "unsubscribe", "wp-login", "wp-admin", "archive",
-    "newsletter", "feed", "rss", "atom",
+    "newsletter", "feed", "rss", "atom", "video", "videos", "photo", "photos",
+    "live", "trending", "web-stories", "info", "advertise", "apps", "app",
+    "topic", "topics", "section", "sections", "shows", "show", "hub", "hubs",
 }
 
 # Platforms where depth-1 paths (e.g. /post-slug) are valid articles.
@@ -66,7 +68,7 @@ def is_article_link(href: str, base_domain: str) -> bool:
         return False
 
     # Reject obvious file types.
-    if re.search(r"\.(css|js|png|jpg|jpeg|gif|svg|ico|pdf|zip|xml|json)$", path, re.I):
+    if re.search(r"\.(css|js|png|jpg|jpeg|gif|svg|ico|pdf|zip|xml|json|webp|mp4|mp3)$", path, re.I):
         return False
 
     segments = [s for s in path.split("/") if s]
@@ -77,6 +79,8 @@ def is_article_link(href: str, base_domain: str) -> bool:
     if any(seg.lower() in _SKIP_SEGMENTS for seg in segments):
         return False
 
+    last_seg = segments[-1].lower()
+
     # Substack: allow /p/<slug>  (depth 2 starting with 'p')
     if len(segments) == 2 and segments[0].lower() == "p":
         return True
@@ -85,17 +89,19 @@ def is_article_link(href: str, base_domain: str) -> bool:
     if len(segments) == 2 and segments[0].startswith("@"):
         return True
 
+    # Check if last segment is a specific article slug
+    is_slug = ("-" in last_seg and len(last_seg) >= 5) or bool(re.search(r"(?:article|story|post|news|\d{3,})", last_seg, re.I))
+
     # For known newsletter/blog platforms, allow depth 1 (single slug)
     bare_domain = base_domain.replace("www.", "")
     if any(bare_domain == p or bare_domain.endswith("." + p) for p in _DEPTH1_PLATFORMS):
-        return len(segments) >= 1
+        return len(segments) >= 1 and (len(last_seg) >= 5 or is_slug)
 
-    # Generic rule: require at least depth 2 for unknown sites
-    # (avoids section/category pages like /tech, /sports)
+    # General news and blog sites require at least depth 2 or an explicit article slug
     if len(segments) < 2:
-        return False
+        return ("-" in last_seg and len(last_seg) >= 18)
 
-    return True
+    return is_slug
 
 
 # Keep the private alias so any existing callers aren't broken.

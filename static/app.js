@@ -319,7 +319,11 @@ async function handleProcess() {
                 if (!resp.ok) {
                     throw new Error(data.detail || `Extraction failed with status ${resp.status}`);
                 }
-                extractedArticles = [data];
+                if (data.is_listing && data.articles && data.articles.length > 0) {
+                    extractedArticles = data.articles;
+                } else {
+                    extractedArticles = [data];
+                }
             } else {
                 const concurrency = parseInt(document.getElementById('concurrencySelect').value) || 5;
                 const resp = await fetch('/extract/batch', {
@@ -331,7 +335,14 @@ async function handleProcess() {
                 if (!resp.ok) {
                     throw new Error(data.detail || `Batch extraction failed with status ${resp.status}`);
                 }
-                extractedArticles = (data.results || []).filter(r => r.text && r.text.length > 50);
+                extractedArticles = [];
+                for (const r of (data.results || [])) {
+                    if (r.is_listing && r.articles && r.articles.length > 0) {
+                        extractedArticles.push(...r.articles.filter(a => a.text && a.text.length > 50));
+                    } else if (r.text && r.text.length > 50) {
+                        extractedArticles.push(r);
+                    }
+                }
             }
 
         } else if (mode === 'raw') {
