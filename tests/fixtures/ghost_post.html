@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Building Resilient Distributed Systems</title>
+    <meta name="author" content="Bob Smith">
+    <meta property="article:published_time" content="2026-05-20T14:30:00Z">
+</head>
+<body class="post-template">
+    <header class="site-header">
+        <nav><a href="/">Engineering Journal</a></nav>
+    </header>
+    <div class="site-content">
+        <article class="post tag-systems no-image">
+            <header class="post-header">
+                <h1 class="post-title">Building Resilient Distributed Systems</h1>
+                <section class="post-meta">
+                    <span class="author">Bob Smith</span>
+                    <time datetime="2026-05-20">May 20, 2026</time>
+                </section>
+            </header>
+            <section class="post-content gh-content">
+                <p>Designing distributed systems requires anticipating failure modes at every boundary. Network partitions, ephemeral node failures, and clock drift are inevitable realities in production cloud environments.</p>
+                <p>To achieve high availability without sacrificing consistency, engineering teams frequently implement consensus algorithms such as Raft or Paxos. These protocols guarantee state machine replication across a quorum of nodes, ensuring safe leader election and log replication.</p>
+                <p>In addition to consensus, fault tolerance relies heavily on circuit breakers, backpressure mechanisms, and idempotent APIs. When upstream dependencies experience latency spikes, circuit breakers prevent catastrophic cascading failures across the service topology.</p>
+                <p>Observability plays an equally critical role. Distributed tracing with OpenTelemetry allows engineers to trace request lifecycles across asynchronous message queues and microservice boundaries, making bottleneck identification straightforward.</p>
+            </section>
+        </article>
+    </div>
+</body>
+</html>

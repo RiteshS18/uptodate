@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+    <channel>
+        <title>Engineering Dispatches</title>
+        <link>https://example.com/blog</link>
+        <description>Technical articles on systems and AI</description>
+        <item>
+            <title>Architecture of Modern LLM Pipelines</title>
+            <link>https://example.com/blog/llm-pipelines</link>
+            <author>sarah@example.com (Sarah Connor)</author>
+            <pubDate>Mon, 15 Jun 2026 12:00:00 GMT</pubDate>
+            <description>A deep dive into retrieval augmented generation and inference optimization.</description>
+        </item>
+        <item>
+            <title>Scaling SQLite for Concurrent Readers</title>
+            <link>https://example.com/blog/sqlite-scaling</link>
+            <author>john@example.com (John Doe)</author>
+            <pubDate>Tue, 10 Jun 2026 09:30:00 GMT</pubDate>
+            <description>Techniques for WAL mode and multi-process SQLite concurrency.</description>
+        </item>
+        <item>
+            <title>Introduction to Vector Embeddings</title>
+            <link>https://example.com/blog/vector-embeddings</link>
+            <author>sarah@example.com (Sarah Connor)</author>
+            <pubDate>Sun, 01 Jun 2026 08:00:00 GMT</pubDate>
+            <description>Understanding cosine similarity and high-dimensional semantic spaces.</description>
+        </item>
+    </channel>
+</rss>

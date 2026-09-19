@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <title>Systems &amp; Architecture</title>
+    <link href="https://example.com/atom.xml" rel="self" />
+    <link href="https://example.com/" />
+    <updated>2026-06-20T18:30:02Z</updated>
+    <id>urn:uuid:60a76c80-d399-11d9-b93C-0003939e0af6</id>
+    <entry>
+        <title>Kernel Bypass Networking with DPDK</title>
+        <link href="https://example.com/posts/kernel-bypass-dpdk" />
+        <id>urn:uuid:1225c695-cfb8-4ebb-aaaa-80da344efa6a</id>
+        <updated>2026-06-20T18:30:02Z</updated>
+        <summary>High-throughput packet processing techniques for high frequency systems.</summary>
+        <author>
+            <name>Alex Rivera</name>
+        </author>
+    </entry>
+</feed>
