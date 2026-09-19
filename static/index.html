@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Backstory Chronicle — AI Newspaper & Newsletter Frontpage</title>
+    
+    <!-- Google Fonts for authentic broadsheet typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Frank+Ruhl+Libre:wght@400;500;700;900&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,400;1,6..72,600&family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;0,900;1,400;1,700&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="theme-newsprint" id="appBody">
+
+    <!-- Top Command & Settings Bar -->
+    <header class="app-toolbar no-print">
+        <div class="toolbar-container">
+            <div class="brand">
+                <i data-lucide="newspaper" class="brand-icon"></i>
+                <span class="brand-title">BACKSTORY <strong>PRESS</strong></span>
+                <span class="brand-badge">v1.0</span>
+            </div>
+
+            <div class="toolbar-actions">
+                <!-- Theme selector -->
+                <div class="theme-picker">
+                    <button type="button" class="theme-btn active" data-theme="theme-newsprint" title="Classic Newsprint (Warm Paper)">
+                        <span class="theme-dot newsprint-dot"></span> Newsprint
+                    </button>
+                    <button type="button" class="theme-btn" data-theme="theme-editorial" title="Crisp White Editorial">
+                        <span class="theme-dot white-dot"></span> White
+                    </button>
+                    <button type="button" class="theme-btn" data-theme="theme-midnight" title="Midnight Dark Mode">
+                        <span class="theme-dot dark-dot"></span> Midnight
+                    </button>
+                </div>
+
+                <div class="divider-v"></div>
+
+                <!-- View Mode Switcher -->
+                <div class="view-switch-group">
+                    <button type="button" class="view-tab-btn active" data-view="newspaper">
+                        <i data-lucide="layout-grid"></i> Broadsheet
+                    </button>
+                    <button type="button" class="view-tab-btn" data-view="newsletter">
+                        <i data-lucide="mail"></i> Newsletter
+                    </button>
+                    <button type="button" class="view-tab-btn" data-view="raw">
+                        <i data-lucide="code-2"></i> Raw Data
+                    </button>
+                </div>
+
+                <div class="divider-v"></div>
+
+                <!-- Action buttons -->
+                <button type="button" class="action-btn" id="printPdfBtn" title="Print or Save as PDF">
+                    <i data-lucide="printer"></i> <span>Print / PDF</span>
+                </button>
+                <button type="button" class="action-btn" id="copyNewsletterBtn" title="Copy Newsletter HTML / Text">
+                    <i data-lucide="copy"></i> <span>Copy</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-wrapper">
+
+        <!-- Input & Control Panel -->
+        <section class="input-panel no-print" id="inputPanel">
+            <div class="panel-card">
+                <div class="panel-header">
+                    <div class="panel-title-wrap">
+                        <i data-lucide="sparkles" class="accent-sparkle"></i>
+                        <h2>Article Ingestion & Newspaper Engine</h2>
+                        <span class="panel-subtitle">Turn any URL, blog, RSS feed, or raw text into a broadsheet newspaper frontpage.</span>
+                    </div>
+
+                    <!-- Input Mode Tabs -->
+                    <div class="input-tabs">
+                        <button type="button" class="input-tab active" data-input-mode="urls">
+                            <i data-lucide="globe"></i> URLs & Feeds
+                        </button>
+                        <button type="button" class="input-tab" data-input-mode="raw">
+                            <i data-lucide="file-text"></i> Paste Raw Text
+                        </button>
+                        <button type="button" class="input-tab" data-input-mode="site">
+                            <i data-lucide="compass"></i> Discover Site
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tab 1: URLs & Feeds -->
+                <div class="tab-content active" id="inputTab-urls">
+                    <div class="url-input-box">
+                        <label for="urlInput" class="form-label">
+                            <span>Target URLs or RSS Feeds (enter one or multiple separated by newlines)</span>
+                            <span class="label-hint">Substack, Ghost, Medium, WordPress, NYT, Tech blogs, etc.</span>
+                        </label>
+                        <textarea id="urlInput" rows="3" placeholder="https://stratechery.com/2024/apple-and-meta/&#10;https://example.com/another-article" class="form-textarea font-mono"></textarea>
+                    </div>
+
+                    <!-- Quick Sample Presets -->
+                    <div class="presets-row">
+                        <span class="presets-label"><i data-lucide="zap"></i> Quick Presets:</span>
+                        <div class="preset-chips">
+                            <button type="button" class="preset-chip" data-preset="tech">
+                                🚀 Tech & AI Sample
+                            </button>
+                            <button type="button" class="preset-chip" data-preset="church">
+                                ⛪ Church & Community Sample
+                            </button>
+                            <button type="button" class="preset-chip" data-preset="world">
+                                🌍 Global & Economy Sample
+                            </button>
+                            <button type="button" class="preset-chip" data-preset="culture">
+                                🎨 Culture & Philosophy
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Raw Text Ingestion -->
+                <div class="tab-content" id="inputTab-raw">
+                    <div class="raw-fields-grid">
+                        <div class="form-group">
+                            <label for="rawTitle" class="form-label">Article Headline</label>
+                            <input type="text" id="rawTitle" class="form-input" placeholder="e.g. Experience God's Love in Our Church: A New Beginning">
+                        </div>
+                        <div class="form-group">
+                            <label for="rawAuthor" class="form-label">Author / Byline</label>
+                            <input type="text" id="rawAuthor" class="form-input" placeholder="e.g. Elena Rostova / The Wire">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="rawBody" class="form-label">Article Body / Text Collected</label>
+                        <textarea id="rawBody" rows="5" placeholder="Paste your collected text, draft, transcript, or newsletter excerpt here..." class="form-textarea"></textarea>
+                    </div>
+                </div>
+
+                <!-- Tab 3: Site Discovery -->
+                <div class="tab-content" id="inputTab-site">
+                    <div class="form-group">
+                        <label for="siteUrlInput" class="form-label">
+                            <span>Blog, Publication, or News Homepage URL</span>
+                            <span class="label-hint">We'll automatically discover all articles via RSS or homepage links.</span>
+                        </label>
+                        <div class="input-with-button">
+                            <input type="url" id="siteUrlInput" class="form-input" placeholder="https://news.ycombinator.com or https://techcrunch.com">
+                            <select id="siteTypeSelect" class="form-select">
+                                <option value="website">Direct Website Scan</option>
+                                <option value="rss">RSS / Atom Feed</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Processing Footer Bar -->
+                <div class="panel-footer">
+                    <div class="footer-options">
+                        <label class="checkbox-label" title="Extract hero and illustration elements for layout">
+                            <input type="checkbox" id="generateVisualsCheck" checked>
+                            <span>Enable Editorial Visuals &amp; Callout Boxes</span>
+                        </label>
+                        <label class="checkbox-label" title="Use concurrent fetching workers">
+                            <span class="opt-label">Workers:</span>
+                            <select id="concurrencySelect" class="form-select-sm">
+                                <option value="3">3 Concurrent</option>
+                                <option value="5" selected>5 Concurrent</option>
+                                <option value="10">10 Concurrent</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <button type="button" class="btn-primary" id="processBtn">
+                        <i data-lucide="play" class="btn-icon"></i>
+                        <span>Generate Newspaper Edition</span>
+                    </button>
+                </div>
+
+                <!-- Progress / Status Bar -->
+                <div class="progress-container" id="progressContainer" style="display: none;">
+                    <div class="progress-bar-wrap">
+                        <div class="progress-bar-fill" id="progressBarFill"></div>
+                    </div>
+                    <div class="progress-status">
+                        <span id="progressStatusText"><i data-lucide="loader-2" class="spin"></i> Fetching and extracting articles...</span>
+                        <span id="progressPercentText" class="font-mono">0%</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dynamic Output Container -->
+        <div id="outputContainer">
+
+            <!-- VIEW 1: NEWSPAPER BROADSHEET (Default) -->
+            <section class="newspaper-page" id="newspaperView">
+
+                <!-- Masthead / Header -->
+                <header class="newspaper-masthead">
+                    <div class="masthead-top-rule"></div>
+                    
+                    <div class="masthead-meta-top">
+                        <div class="meta-item">
+                            <span class="label">EDITION:</span> <span id="mastheadEdition">MORNING BROADSHEET</span>
+                        </div>
+                        <div class="meta-item center-quote">
+                            <span id="mastheadMotto">"An Independent Daily Journal of In-Depth Ideas &amp; Dispatches"</span>
+                        </div>
+                        <div class="meta-item text-right">
+                            <span class="label">PRICE:</span> <span>COMPLIMENTARY</span>
+                        </div>
+                    </div>
+
+                    <div class="masthead-title-wrap">
+                        <div class="masthead-side-ornament left"></div>
+                        <h1 class="masthead-title" id="mastheadTitle">THE BACKSTORY HERALD</h1>
+                        <div class="masthead-side-ornament right"></div>
+                    </div>
+
+                    <div class="masthead-meta-bottom">
+                        <div class="meta-left">
+                            <span id="currentDateDisplay">SATURDAY, SEPTEMBER 19, 2026</span>
+                        </div>
+                        <div class="meta-center">
+                            <span>VOL. CCLIV • NO. 89</span>
+                        </div>
+                        <div class="meta-right">
+                            <span id="articleCountBadge">3 DISPATCHES</span> • <span id="readingTimeDisplay">6 MIN READ</span>
+                        </div>
+                    </div>
+
+                    <div class="masthead-bottom-double-rule"></div>
+                </header>
+
+                <!-- News Ticker / Lead Flash Bar -->
+                <div class="ticker-bar" id="newsTickerBar">
+                    <span class="ticker-tag">BULLETIN</span>
+                    <div class="ticker-content" id="tickerText">
+                        AI content extraction pipeline ready • Multi-strategy fallbacks active • Substack, Ghost, Trafilatura &amp; BS4 enabled.
+                    </div>
+                </div>
+
+                <!-- Newspaper Grid Layout (Inspired by User Broadhseet Reference) -->
+                <div class="broadsheet-grid" id="broadsheetGrid">
+                    <!-- Dynamic broadsheet content inserted via JS -->
+                </div>
+
+                <!-- Newspaper Footer -->
+                <footer class="newspaper-footer">
+                    <div class="footer-rule"></div>
+                    <div class="footer-content">
+                        <span>Printed &amp; Formatted with the Backstory Extraction Engine</span>
+                        <span>•</span>
+                        <span>All text extracted directly from open web sources</span>
+                        <span>•</span>
+                        <span>Page 1 of 1 — Front Page Edition</span>
+                    </div>
+                </footer>
+            </section>
+
+            <!-- VIEW 2: NEWSLETTER VIEW (Modern Substack / Morning Brew Style) -->
+            <section class="newsletter-page" id="newsletterView" style="display: none;">
+                <div class="newsletter-card">
+                    <header class="newsletter-header">
+                        <div class="newsletter-badge">THE DAILY NEWSLETTER BRIEF</div>
+                        <h1 class="newsletter-title" id="newsletterMastheadTitle">Backstory Morning Dispatch</h1>
+                        <p class="newsletter-date" id="newsletterDateDisplay">September 19, 2026 • Curated Executive Edition</p>
+                        <div class="newsletter-divider"></div>
+                    </header>
+
+                    <!-- Newsletter Executive Summary Box -->
+                    <div class="newsletter-exec-summary" id="newsletterExecSummary">
+                        <h3><i data-lucide="zap"></i> Executive Takeaways</h3>
+                        <ul id="execSummaryList">
+                            <li>Multi-article synthesis formatted for high-efficiency reading.</li>
+                            <li>Instant access to primary text sources and author perspectives.</li>
+                        </ul>
+                    </div>
+
+                    <!-- Newsletter Articles List -->
+                    <div class="newsletter-articles" id="newsletterArticlesList">
+                        <!-- Dynamic newsletter items inserted via JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW 3: RAW DATA / DEVELOPER VIEW -->
+            <section class="raw-data-page" id="rawDataView" style="display: none;">
+                <div class="raw-card">
+                    <div class="raw-header">
+                        <div class="raw-title-wrap">
+                            <i data-lucide="database"></i>
+                            <h3>Extracted JSON Payload &amp; Telemetry</h3>
+                        </div>
+                        <button type="button" class="btn-sm" id="copyJsonBtn">
+                            <i data-lucide="clipboard"></i> Copy JSON
+                        </button>
+                    </div>
+                    <pre class="json-display" id="rawJsonDisplay"><code>// Run extraction to see JSON output</code></pre>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Focused Article Reading Modal -->
+    <div class="reader-modal-overlay" id="readerModal" style="display: none;">
+        <div class="reader-modal-card">
+            <header class="reader-modal-header">
+                <div class="reader-tags">
+                    <span class="badge badge-category" id="modalCategory">General</span>
+                    <span class="badge badge-source" id="modalSourceBadge">Direct</span>
+                </div>
+                <div class="reader-controls">
+                    <button type="button" class="icon-btn" id="ttsAudioBtn" title="Listen to Article (Audio)">
+                        <i data-lucide="volume-2"></i>
+                    </button>
+                    <button type="button" class="icon-btn" id="zoomInBtn" title="Increase Font Size">
+                        <i data-lucide="type"></i>+
+                    </button>
+                    <button type="button" class="icon-btn" id="closeReaderBtn" title="Close">
+                        <i data-lucide="x"></i>
+                    </button>
+                </div>
+            </header>
+
+            <div class="reader-modal-body" id="readerModalContent">
+                <h1 class="reader-title" id="modalTitle">Article Headline</h1>
+                <div class="reader-byline" id="modalByline">By Author • Published Date</div>
+                <div class="reader-divider"></div>
+                <div class="reader-prose" id="modalText">
+                    Article text goes here...
+                </div>
+            </div>
+
+            <footer class="reader-modal-footer">
+                <a href="#" target="_blank" rel="noopener noreferrer" class="source-link" id="modalOriginalLink">
+                    <i data-lucide="external-link"></i> View Original Source
+                </a>
+                <button type="button" class="btn-secondary" id="modalCopyBtn">
+                    <i data-lucide="copy"></i> Copy Article Text
+                </button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+    </script>
+</body>
+</html>

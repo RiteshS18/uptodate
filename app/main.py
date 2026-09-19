@@ -1,7 +1,8 @@
 """
-Main FastAPI application for the Backstory text-extraction service.
+Main FastAPI application for the Backstory text-extraction service & newspaper UI.
 
 Exposes endpoints for:
+- GET /: Interactive Newspaper & Newsletter frontpage interface.
 - POST /extract: Single URL text extraction with full strategy cascade.
 - POST /extract/source-check: Cheap "what's new" poll for RSS feeds or website homepages.
 - POST /extract/batch: Concurrent extraction of multiple article URLs.
@@ -13,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Optional
@@ -22,7 +24,9 @@ import feedparser
 import httpx
 from bs4 import BeautifulSoup
 from fastapi import FastAPI, HTTPException, Query, Response, status
-from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.database import get_db, init_db, upsert_source
 from app.feed_discovery import discover_feed
@@ -79,6 +83,36 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+# Enable CORS for browser access
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ---------------------------------------------------------------------------
+# Static Files & Frontend UI Mount
+# ---------------------------------------------------------------------------
+
+_STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
+if os.path.exists(_STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
+
+
+@app.get("/", include_in_schema=False)
+async def serve_index():
+    """Serve the interactive broadsheet newspaper and newsletter UI."""
+    index_file = os.path.join(_STATIC_DIR, "index.html")
+    if os.path.exists(index_file):
+        return FileResponse(index_file)
+    return {
+        "service": "Backstory Text Extraction Service",
+        "docs": "/docs",
+        "health": "/health",
+    }
 
 
 # ---------------------------------------------------------------------------
