@@ -54,22 +54,35 @@ class ExtractRequest(BaseModel):
     model_config = {"json_schema_extra": {"example": {"url": "https://example.com/some-article"}}}
 
 
+class RelatedSource(BaseModel):
+    title:       str           = Field(..., description="Title or headline of the related source.")
+    url:         str           = Field(..., description="URL of the related source.")
+    author:      Optional[str] = Field(None, description="Author or channel name.")
+    source_type: Optional[str] = Field(None, description="Source media type ('article' or 'youtube').")
+    category:    Optional[str] = Field(None, description="Category of the source.")
+
+
 class ArticleResult(BaseModel):
-    url:               str                           = Field(..., description="Canonical URL that was scraped.")
-    title:             Optional[str]                 = Field(None, description="Article title (None if not found).")
-    author:            Optional[str]                 = Field(None, description="Byline / author name.")
-    published_date:    Optional[str]                 = Field(None, description="Publication date in ISO-8601 format when available.")
-    text:              str                           = Field(..., description="Full extracted article text, cleaned of boilerplate.")
-    char_count:        int                           = Field(..., description="Character count of the extracted text.")
-    extraction_method: Optional[ExtractionMethod]    = Field(None, description="Which extraction strategy produced the text.")
-    fetch_strategy:    Optional[FetchStrategy]       = Field(None, description="Which fetch strategy obtained the HTML.")
-    summary:           Optional[str]                 = Field(None, description="Executive summary of the article.")
-    deck:              Optional[str]                 = Field(None, description="Punchy sub-headline or deck.")
-    takeaways:         Optional[list[str]]           = Field(None, description="Key bullet takeaways for newsletter format.")
-    category:          Optional[str]                 = Field(None, description="Classified category topic.")
-    is_listing:        Optional[bool]                = Field(False, description="True if this URL was detected as a category/hub listing page.")
-    article_count:     Optional[int]                 = Field(1, description="Number of articles contained in this result.")
-    articles:          Optional[list[ArticleResult]] = Field(None, description="List of individual extracted articles if this was a listing page.")
+    url:                 str                           = Field(..., description="Canonical URL that was scraped.")
+    title:               Optional[str]                 = Field(None, description="Article title (None if not found).")
+    author:              Optional[str]                 = Field(None, description="Byline / author name.")
+    published_date:      Optional[str]                 = Field(None, description="Publication date in ISO-8601 format when available.")
+    text:                str                           = Field(..., description="Full extracted article text or video transcript.")
+    char_count:          int                           = Field(..., description="Character count of the extracted text.")
+    extraction_method:   Optional[str]                 = Field(None, description="Which extraction strategy produced the text.")
+    fetch_strategy:      Optional[str]                 = Field(None, description="Which fetch strategy obtained the content.")
+    summary:             Optional[str]                 = Field(None, description="Executive summary of the article or video.")
+    deck:                Optional[str]                 = Field(None, description="Punchy sub-headline or deck.")
+    takeaways:           Optional[list[str]]           = Field(None, description="Key bullet takeaways for newsletter format.")
+    category:            Optional[str]                 = Field(None, description="Classified category topic.")
+    thumbnail_url:       Optional[str]                 = Field(None, description="Thumbnail or hero image URL.")
+    is_video:            Optional[bool]                = Field(False, description="True if this item is a YouTube video.")
+    video_id:            Optional[str]                 = Field(None, description="YouTube Video ID if applicable.")
+    is_listing:          Optional[bool]                = Field(False, description="True if this URL was detected as a category/hub listing page.")
+    article_count:       Optional[int]                 = Field(1, description="Number of articles contained in this result.")
+    articles:            Optional[list[ArticleResult]] = Field(None, description="List of individual extracted articles if this was a listing page.")
+    related_sources:     Optional[list[RelatedSource]] = Field(None, description="Other sources covering this same story (cross-source deduplication).")
+    cross_source_count:  Optional[int]                 = Field(1, description="Count of sources consolidated into this story.")
 
 
 class ExtractionError(BaseModel):
@@ -79,13 +92,44 @@ class ExtractionError(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Followed Sources & Refresh Models
+# ---------------------------------------------------------------------------
+
+class SourceModel(BaseModel):
+    id:               str           = Field(..., description="UUID of the source.")
+    url:              str           = Field(..., description="Original URL or feed URL.")
+    type:             str           = Field(..., description="'rss', 'website', 'youtube_channel', or 'youtube_video'.")
+    name:             str           = Field(..., description="Human-readable name or channel name.")
+    feed_url:         Optional[str] = Field(None, description="Resolved XML feed URL.")
+    last_checked_at:  Optional[str] = Field(None, description="Timestamp of last poll.")
+    last_seen_marker: Optional[str] = Field(None, description="Marker for incremental poll.")
+    created_at:       str           = Field(..., description="Creation timestamp.")
+
+
+class CreateSourceRequest(BaseModel):
+    url:         str                      = Field(..., description="YouTube Channel, RSS feed, or website URL.")
+    source_type: Optional[str]            = Field("auto", description="'rss', 'website', 'youtube_channel', or 'auto'.")
+    name:        Optional[str]            = Field(None, description="Optional custom label.")
+
+
+class RefreshResponse(BaseModel):
+    status:          str  = Field(..., description="'success' or 'in_progress'.")
+    new_items_count: int  = Field(..., description="Number of newly discovered & processed items.")
+    sources_checked: int  = Field(..., description="Total followed sources polled.")
+    errors_count:    int  = Field(0, description="Number of source errors encountered.")
+    refreshed_at:    str  = Field(..., description="Timestamp of refresh cycle.")
+
+
+# ---------------------------------------------------------------------------
 # /extract/source-check  — cheap "what's new" poll
 # ---------------------------------------------------------------------------
 
 
 class SourceCheckRequest(BaseModel):
-    source_url:  HttpUrl                   = Field(..., description="Homepage or feed URL to check for new articles.")
-    source_type: Literal["rss", "website"] = Field(..., description="'rss' for RSS/Atom feeds; 'website' for plain HTML sites.")
+    source_url:  HttpUrl = Field(..., description="Homepage, feed, or YouTube URL to check for new items.")
+    source_type: Literal["rss", "website", "youtube", "youtube_channel", "auto"] = Field(
+        "auto", description="'rss', 'website', 'youtube_channel', or 'auto'."
+    )
 
     model_config = {"json_schema_extra": {"example": {
         "source_url": "https://example.com/blog",
@@ -105,8 +149,9 @@ class SourceCheckResponse(BaseModel):
 
 
 class BatchExtractRequest(BaseModel):
-    urls:            list[HttpUrl] = Field(..., description="List of article URLs to scrape.", min_length=1, max_length=200)
+    urls:            list[HttpUrl] = Field(..., description="List of article or video URLs to scrape.", min_length=1, max_length=200)
     max_concurrency: int           = Field(5, ge=1, le=20, description="Maximum parallel scrape workers.")
+    deduplicate:     bool          = Field(True, description="Whether to run cross-source semantic deduplication on the results.")
 
     model_config = {"json_schema_extra": {"example": {
         "urls": ["https://example.com/article-1", "https://example.com/article-2"],

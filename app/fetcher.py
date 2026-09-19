@@ -278,7 +278,20 @@ async def fetch_new_items_website(source: dict) -> list[dict]:
 
 async def fetch_new_items(source: dict) -> list[dict]:
     """Route to the correct fetcher based on source type."""
-    if source["type"] == "rss":
+    src_type = source.get("type", "website")
+    url = source.get("url", "")
+
+    if src_type in ("youtube_channel", "youtube") or "youtube.com" in url or "youtu.be" in url:
+        from app.youtube import resolve_channel_id, get_channel_rss_url
+        if not source.get("feed_url") or "youtube.com/feeds/videos.xml" not in source.get("feed_url", ""):
+            channel_id = await resolve_channel_id(url)
+            if channel_id:
+                source["feed_url"] = get_channel_rss_url(channel_id)
+        if source.get("feed_url"):
+            return await fetch_new_items_rss(source)
+        return []
+
+    if src_type == "rss":
         return await fetch_new_items_rss(source)
     else:
         return await fetch_new_items_website(source)

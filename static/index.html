@@ -56,6 +56,18 @@
 
                 <div class="divider-v"></div>
 
+                <div class="divider-v"></div>
+
+                <!-- Followed Sources & Refresh Actions -->
+                <button type="button" class="action-btn" id="followedSourcesBtn" title="Manage Followed Channels & Feeds">
+                    <i data-lucide="rss"></i> <span>Sources (<span id="followedSourcesCountBadge">0</span>)</span>
+                </button>
+                <button type="button" class="action-btn action-btn-accent" id="manualRefreshBtn" title="Fetch What's New Since Last Checked (Trigger Cron/Schedule)">
+                    <i data-lucide="refresh-cw" id="refreshIcon"></i> <span>Fetch What's New</span>
+                </button>
+
+                <div class="divider-v"></div>
+
                 <!-- Action buttons -->
                 <button type="button" class="action-btn" id="printPdfBtn" title="Print or Save as PDF">
                     <i data-lucide="printer"></i> <span>Print / PDF</span>
@@ -76,14 +88,17 @@
                 <div class="panel-header">
                     <div class="panel-title-wrap">
                         <i data-lucide="sparkles" class="accent-sparkle"></i>
-                        <h2>Article Ingestion & Newspaper Engine</h2>
-                        <span class="panel-subtitle">Turn any URL, blog, RSS feed, or raw text into a broadsheet newspaper frontpage.</span>
+                        <h2>AI Front Page &amp; Newspaper Briefing Engine</h2>
+                        <span class="panel-subtitle">Follow YouTube channels, RSS feeds, blogs &amp; newsletters. Synthesizes &amp; deduplicates what's new since your last visit.</span>
                     </div>
 
                     <!-- Input Mode Tabs -->
                     <div class="input-tabs">
                         <button type="button" class="input-tab active" data-input-mode="urls">
-                            <i data-lucide="globe"></i> URLs & Feeds
+                            <i data-lucide="globe"></i> URLs &amp; Feeds
+                        </button>
+                        <button type="button" class="input-tab" data-input-mode="youtube">
+                            <i data-lucide="video"></i> YouTube Videos &amp; Channels
                         </button>
                         <button type="button" class="input-tab" data-input-mode="raw">
                             <i data-lucide="file-text"></i> Paste Raw Text
@@ -98,27 +113,53 @@
                 <div class="tab-content active" id="inputTab-urls">
                     <div class="url-input-box">
                         <label for="urlInput" class="form-label">
-                            <span>Target URLs or RSS Feeds (enter one or multiple separated by newlines)</span>
-                            <span class="label-hint">Substack, Ghost, Medium, WordPress, NYT, Tech blogs, etc.</span>
+                            <span>Target URLs, Newsletters, RSS Feeds, or Articles</span>
+                            <span class="label-hint">Substack, Ghost, Medium, WordPress, NYT, Tech blogs, etc. (Separate by newline)</span>
                         </label>
-                        <textarea id="urlInput" rows="3" placeholder="https://stratechery.com/2024/apple-and-meta/&#10;https://example.com/another-article" class="form-textarea font-mono"></textarea>
+                        <textarea id="urlInput" rows="3" placeholder="https://stratechery.com/2024/apple-and-meta/&#10;https://techcrunch.com/feed/&#10;https://www.theverge.com/rss/index.xml" class="form-textarea font-mono"></textarea>
                     </div>
 
                     <!-- Quick Sample Presets -->
                     <div class="presets-row">
                         <span class="presets-label"><i data-lucide="zap"></i> Quick Presets:</span>
                         <div class="preset-chips">
+                            <button type="button" class="preset-chip" data-preset="multisource">
+                                🌐 YouTube + Blog Multi-Source
+                            </button>
                             <button type="button" class="preset-chip" data-preset="tech">
-                                🚀 Tech & AI Sample
+                                🚀 Tech &amp; AI Sample
                             </button>
                             <button type="button" class="preset-chip" data-preset="church">
-                                ⛪ Church & Community Sample
+                                ⛪ Church &amp; Community Sample
                             </button>
                             <button type="button" class="preset-chip" data-preset="world">
-                                🌍 Global & Economy Sample
+                                🌍 Global &amp; Economy Sample
                             </button>
-                            <button type="button" class="preset-chip" data-preset="culture">
-                                🎨 Culture & Philosophy
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 1.5: YouTube Videos & Channels -->
+                <div class="tab-content" id="inputTab-youtube">
+                    <div class="url-input-box">
+                        <label for="ytInput" class="form-label">
+                            <span>YouTube Video or Channel URLs</span>
+                            <span class="label-hint">e.g. https://www.youtube.com/watch?v=... or https://www.youtube.com/@mkbhd (with automatic caption extraction &amp; Whisper fallback)</span>
+                        </label>
+                        <textarea id="ytInput" rows="3" placeholder="https://www.youtube.com/watch?v=kCc8FmEb1nY&#10;https://www.youtube.com/@mkbhd&#10;https://www.youtube.com/@Fireship" class="form-textarea font-mono"></textarea>
+                    </div>
+
+                    <div class="presets-row">
+                        <span class="presets-label"><i data-lucide="video"></i> YouTube Presets:</span>
+                        <div class="preset-chips">
+                            <button type="button" class="preset-chip" data-preset="yt_tech">
+                                🎥 MKBHD &amp; Verge Video Reviews
+                            </button>
+                            <button type="button" class="preset-chip" data-preset="yt_ai">
+                                🧠 AI Research &amp; 3Blue1Brown
+                            </button>
+                            <button type="button" class="preset-chip" data-preset="yt_fireship">
+                                ⚡ Fireship Code Dispatches
                             </button>
                         </div>
                     </div>
@@ -331,6 +372,12 @@
             </header>
 
             <div class="reader-modal-body" id="readerModalContent">
+                <div id="modalVideoEmbed" style="display: none; margin-bottom: 1.25rem; border-radius: 8px; overflow: hidden; background: #000;">
+                    <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;">
+                        <iframe id="modalVideoIframe" style="position: absolute; top:0; left: 0; width: 100%; height: 100%; border:0;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                    </div>
+                </div>
+
                 <h1 class="reader-title" id="modalTitle">Article Headline</h1>
                 <div class="reader-byline" id="modalByline">By Author • Published Date</div>
                 <div class="reader-divider"></div>
@@ -345,6 +392,71 @@
                 </a>
                 <button type="button" class="btn-secondary" id="modalCopyBtn">
                     <i data-lucide="copy"></i> Copy Article Text
+                </button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Followed Sources Management Modal / Drawer -->
+    <div class="reader-modal-overlay" id="sourcesModal" style="display: none;">
+        <div class="reader-modal-card sources-modal-card">
+            <header class="reader-modal-header">
+                <div class="reader-tags">
+                    <span class="badge badge-category"><i data-lucide="rss" style="width: 13px; height: 13px; vertical-align: middle;"></i> Sources Feed Manager</span>
+                </div>
+                <div class="reader-controls">
+                    <button type="button" class="icon-btn" id="closeSourcesBtn" title="Close">
+                        <i data-lucide="x"></i>
+                    </button>
+                </div>
+            </header>
+
+            <div class="reader-modal-body">
+                <h2 style="font-family: var(--font-headline); margin-bottom: 0.5rem;">Your Followed Sources &amp; Channels</h2>
+                <p style="color: var(--ink-muted); font-size: 0.9rem; margin-bottom: 1.25rem;">
+                    The AI periodically checks these sources via cron/scheduler. Click <strong>"Fetch What's New"</strong> anytime to pull dispatches published since your last visit.
+                </p>
+
+                <!-- Add Source Form -->
+                <div class="add-source-box">
+                    <h3 style="font-size: 0.95rem; font-family: var(--font-sans); font-weight: 600; margin-bottom: 0.6rem; color: var(--ink-primary);">Add New Followed Source</h3>
+                    <div class="add-source-grid">
+                        <input type="text" id="newSourceName" class="form-input" placeholder="Name (e.g. MKBHD or Stratechery)">
+                        <select id="newSourceType" class="form-select">
+                            <option value="youtube_channel">YouTube Channel</option>
+                            <option value="rss">RSS / Atom Feed</option>
+                            <option value="website">Blog / Website</option>
+                        </select>
+                    </div>
+                    <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem;">
+                        <input type="url" id="newSourceUrl" class="form-input" style="flex: 1;" placeholder="URL (e.g. https://www.youtube.com/@mkbhd or https://stratechery.com/feed)">
+                        <button type="button" class="btn-primary" id="addSourceSubmitBtn" style="white-space: nowrap;">
+                            <i data-lucide="plus"></i> Add Source
+                        </button>
+                    </div>
+                </div>
+
+                <div class="reader-divider" style="margin: 1.5rem 0;"></div>
+
+                <!-- Sources List -->
+                <div class="sources-list-header">
+                    <h3 style="font-size: 0.95rem; font-family: var(--font-sans); font-weight: 600;">Active Followed Sources</h3>
+                    <button type="button" class="btn-sm" id="seedPresetSourcesBtn" title="Add curated tech & science channels">
+                        <i data-lucide="sparkles"></i> Load Recommended Sources
+                    </button>
+                </div>
+
+                <div class="sources-list" id="followedSourcesList">
+                    <div style="text-align: center; color: var(--ink-muted); padding: 1.5rem;">Loading followed sources...</div>
+                </div>
+            </div>
+
+            <footer class="reader-modal-footer">
+                <button type="button" class="btn-primary" id="triggerRefreshFromModalBtn">
+                    <i data-lucide="refresh-cw"></i> Fetch New Dispatches Now
+                </button>
+                <button type="button" class="btn-secondary" id="closeSourcesFooterBtn">
+                    Done
                 </button>
             </footer>
         </div>

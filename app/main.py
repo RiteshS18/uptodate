@@ -28,24 +28,43 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.database import get_db, init_db, upsert_source
+from app.database import (
+    delete_source,
+    get_all_sources,
+    get_db,
+    get_recent_processed_items,
+    init_db,
+    save_processed_item,
+    upsert_source,
+)
+from app.dedup import deduplicate_and_cluster_stories
 from app.feed_discovery import discover_feed
 from app.fetcher import fetch_new_items, is_article_link
 from app.models import (
     ArticleResult,
     BatchExtractRequest,
     BatchExtractResponse,
+    CreateSourceRequest,
     ErrorCode,
     ExtractionError,
     ExtractRequest,
     HealthResponse,
     LegacyArticleResult,
     LegacyScrapeResponse,
+    RefreshResponse,
+    RelatedSource,
     ScrapeRequest,
     SourceCheckRequest,
     SourceCheckResponse,
+    SourceModel,
 )
 from app.noise_filter import noise_filter
+from app.scheduler import (
+    get_scheduler_status,
+    refresh_all_sources,
+    shutdown_scheduler,
+    start_scheduler,
+)
 from app.scraper import (
     ExtractionFailed,
     _extract_substack,
@@ -55,6 +74,7 @@ from app.scraper import (
     scrape_url,
 )
 from app.summarizer import generate_newsletter_digest
+from app.youtube import is_youtube_url, resolve_channel_id, get_channel_rss_url
 
 logging.basicConfig(
     level=logging.INFO,
@@ -69,19 +89,21 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Ensure database schema is initialized on application startup."""
+    """Ensure database schema is initialized and background refresh scheduler starts."""
     logger.info("Initializing database schema...")
     await init_db()
+    # Start automated 30-minute background source refresh cron
+    start_scheduler(interval_minutes=30)
     yield
+    shutdown_scheduler()
     logger.info("Application shutdown.")
 
 
 app = FastAPI(
-    title="Backstory Text Extraction Service",
+    title="Backstory AI Front Page & Text Extraction Service",
     description=(
-        "Production-ready text extraction service for Backstory. "
-        "Extracts clean, structured article text from RSS feeds, Substack, "
-        "Ghost, WordPress, and arbitrary web pages."
+        "Production-ready text extraction, YouTube transcription, "
+        "and AI-curated front page briefing engine for Backstory."
     ),
     version="1.0.0",
     lifespan=lifespan,
@@ -112,7 +134,7 @@ async def serve_index():
     if os.path.exists(index_file):
         return FileResponse(index_file)
     return {
-        "service": "Backstory Text Extraction Service",
+        "service": "Backstory AI Front Page Service",
         "docs": "/docs",
         "health": "/health",
     }
@@ -190,7 +212,7 @@ def _check_playwright_available() -> bool:
 
 async def _scrape_and_process_article(url_str: str) -> ArticleResult:
     """
-    Run full single-article extraction, noise-filtering, and newsletter summarization.
+    Run full single-article or YouTube video extraction, noise-filtering, and newsletter summarization.
     If the URL is a listing/hub/category page, discovers sub-articles, extracts and
     summarizes each individually, and returns an ArticleResult containing the list.
     """
@@ -239,6 +261,9 @@ async def _scrape_and_process_article(url_str: str) -> ArticleResult:
                         deck=digest.get("deck"),
                         takeaways=digest.get("takeaways"),
                         category=digest.get("category"),
+                        thumbnail_url=sub_res.get("thumbnail_url"),
+                        is_video=bool(sub_res.get("is_video")),
+                        video_id=sub_res.get("video_id"),
                         is_listing=False,
                         article_count=1,
                     )
@@ -274,15 +299,15 @@ async def _scrape_and_process_article(url_str: str) -> ArticleResult:
             articles=valid_articles,
         )
 
-    # 2. Single article handling
+    # 2. Single article or YouTube video handling
     text = res.get("text", "").strip()
     title = res.get("title")
 
     # Noise filter check
     passed, filter_reason = await noise_filter(text, title)
     if not passed:
-        logger.info("Filtered article %s: %s", url_str, filter_reason)
-        raise ExtractionFailed("no_content", f"Article filtered as noise: {filter_reason}")
+        logger.info("Filtered article/video %s: %s", url_str, filter_reason)
+        raise ExtractionFailed("no_content", f"Item filtered as noise: {filter_reason}")
 
     digest = await generate_newsletter_digest(
         text,
@@ -303,6 +328,9 @@ async def _scrape_and_process_article(url_str: str) -> ArticleResult:
         deck=digest.get("deck"),
         takeaways=digest.get("takeaways"),
         category=digest.get("category"),
+        thumbnail_url=res.get("thumbnail_url"),
+        is_video=bool(res.get("is_video")),
+        video_id=res.get("video_id"),
         is_listing=False,
         article_count=1,
         articles=None,
@@ -322,10 +350,10 @@ async def _scrape_and_process_article(url_str: str) -> ArticleResult:
         502: {"model": ExtractionError, "description": "Site blocked requests or DNS failure."},
         504: {"model": ExtractionError, "description": "Request timed out fetching URL."},
     },
-    summary="Extract clean article text and newsletter summary from a URL or listing page",
+    summary="Extract clean article text / YouTube transcript and newsletter summary from a URL",
     description=(
-        "Fetches a webpage, detects if it is a listing/hub page or a single article, "
-        "extracts clean structured text, and produces individual newsletter summaries."
+        "Fetches a webpage or YouTube video, detects if it is a listing page or video, "
+        "extracts structured text/transcript, and produces an executive newsletter briefing."
     ),
 )
 async def extract(request: ExtractRequest):
@@ -362,9 +390,9 @@ async def extract(request: ExtractRequest):
 @app.post(
     "/extract/source-check",
     response_model=SourceCheckResponse,
-    summary="Poll a source for new/unseen article URLs",
+    summary="Poll a source for new/unseen article or YouTube video URLs",
     description=(
-        "Checks an RSS feed or website homepage for articles that have not "
+        "Checks an RSS feed, YouTube channel, or website homepage for items that have not "
         "been seen previously in the database, marks them as seen, and updates markers."
     ),
 )
@@ -372,7 +400,23 @@ async def source_check(request: SourceCheckRequest):
     url_str = str(request.source_url)
     source_type = request.source_type
 
-    feed_url = url_str if source_type == "rss" else None
+    # Auto-detect source type if requested
+    if source_type == "auto":
+        if is_youtube_url(url_str):
+            source_type = "youtube_channel"
+        elif any(url_str.endswith(ext) for ext in [".xml", ".rss", ".atom"]) or "feed" in url_str:
+            source_type = "rss"
+        else:
+            source_type = "website"
+
+    feed_url = None
+    if source_type in ("youtube_channel", "youtube"):
+        channel_id = await resolve_channel_id(url_str)
+        if channel_id:
+            feed_url = get_channel_rss_url(channel_id)
+    elif source_type == "rss":
+        feed_url = url_str
+
     source_id = await upsert_source(
         url=url_str,
         source_type=source_type,
@@ -415,14 +459,14 @@ async def source_check(request: SourceCheckRequest):
 
 
 # ---------------------------------------------------------------------------
-# POST /extract/batch — Concurrent Multi-URL Extraction
+# POST /extract/batch — Concurrent Multi-URL Extraction with Deduplication
 # ---------------------------------------------------------------------------
 
 @app.post(
     "/extract/batch",
     response_model=BatchExtractResponse,
-    summary="Batch extract multiple article URLs in parallel",
-    description="Extracts clean text and summaries from a list of URLs concurrently up to max_concurrency workers.",
+    summary="Batch extract multiple article or YouTube URLs in parallel with semantic deduplication",
+    description="Extracts clean text and summaries from a list of URLs concurrently and runs cross-source deduplication.",
 )
 async def extract_batch(request: BatchExtractRequest):
     semaphore = asyncio.Semaphore(request.max_concurrency)
@@ -446,7 +490,132 @@ async def extract_batch(request: BatchExtractRequest):
                 )
 
     tasks = [_extract_single(str(u)) for u in request.urls]
-    results = await asyncio.gather(*tasks)
+    raw_results = await asyncio.gather(*tasks)
+
+    # Separate successes for cross-source deduplication
+    success_articles: list[ArticleResult] = []
+    error_results: list[ExtractionError] = []
+
+    for r in raw_results:
+        if isinstance(r, ArticleResult):
+            success_articles.append(r)
+        else:
+            error_results.append(r)
+
+    # Run Cross-Source Semantic Deduplication if enabled
+    if request.deduplicate and len(success_articles) > 1:
+        dict_items = [a.model_dump() for a in success_articles]
+        clustered_dicts = await deduplicate_and_cluster_stories(dict_items, similarity_threshold=0.82)
+        final_articles = [ArticleResult(**d) for d in clustered_dicts]
+    else:
+        final_articles = success_articles
+
+    combined_results: list[ArticleResult | ExtractionError] = list(final_articles) + list(error_results)
+
+    return BatchExtractResponse(
+        results=combined_results,
+        success_count=len(final_articles),
+        failure_count=len(error_results),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Followed Sources & Refresh Endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/sources", response_model=list[SourceModel], summary="List all followed sources")
+async def list_sources():
+    """Retrieve all followed YouTube channels, blogs, and RSS feeds."""
+    sources = await get_all_sources()
+    return [
+        SourceModel(
+            id=s["id"],
+            url=s["url"],
+            type=s["type"],
+            name=s["name"],
+            feed_url=s.get("feed_url"),
+            last_checked_at=s.get("last_checked_at"),
+            last_seen_marker=s.get("last_seen_marker"),
+            created_at=s["created_at"],
+        )
+        for s in sources
+    ]
+
+
+@app.post("/sources", response_model=SourceModel, summary="Follow a new YouTube channel, blog, or RSS feed")
+async def create_source(request: CreateSourceRequest):
+    """Add a new followed source with automatic channel/feed resolution."""
+    url = request.url.strip()
+    src_type = request.source_type or "auto"
+
+    if src_type == "auto":
+        if is_youtube_url(url):
+            src_type = "youtube_channel"
+        elif any(url.endswith(ext) for ext in [".xml", ".rss", ".atom"]) or "feed" in url:
+            src_type = "rss"
+        else:
+            src_type = "website"
+
+    feed_url = None
+    name = request.name or url
+
+    if src_type in ("youtube_channel", "youtube"):
+        channel_id = await resolve_channel_id(url)
+        if channel_id:
+            feed_url = get_channel_rss_url(channel_id)
+            if not request.name:
+                name = f"YouTube Channel ({channel_id})"
+
+    source_id = await upsert_source(url, src_type, name=name, feed_url=feed_url)
+
+    return SourceModel(
+        id=source_id,
+        url=url,
+        type=src_type,
+        name=name,
+        feed_url=feed_url,
+        last_checked_at=None,
+        last_seen_marker=None,
+        created_at=datetime.now(timezone.utc).isoformat(),
+    )
+
+
+@app.delete("/sources/{source_id}", summary="Unfollow a source")
+async def remove_source(source_id: str):
+    """Delete a followed source and its seen markers."""
+    ok = await delete_source(source_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Source not found.")
+    return {"status": "deleted", "source_id": source_id}
+
+
+@app.post("/refresh", response_model=RefreshResponse, summary="Manual refresh trigger across all followed sources")
+async def trigger_refresh(limit_per_source: int = Query(default=4, ge=1, le=10)):
+    """
+    Manually triggers an immediate pull across all followed YouTube channels and blogs,
+    extracting genuinely new items, summarizing them, and indexing into the daily newspaper.
+    """
+    stats = await refresh_all_sources(limit_per_source=limit_per_source)
+    return RefreshResponse(
+        status=stats.get("status", "success"),
+        new_items_count=stats.get("new_items_count", 0),
+        sources_checked=stats.get("sources_checked", 0),
+        errors_count=stats.get("errors_count", 0),
+        refreshed_at=stats.get("refreshed_at", datetime.now(timezone.utc).isoformat()),
+    )
+
+
+@app.get("/scheduler", summary="Get background cron scheduler status")
+async def scheduler_status_endpoint():
+    """Returns the background refresh schedule status, last run time, and statistics."""
+    return get_scheduler_status()
+
+
+@app.get("/newspaper", summary="Get the latest daily newspaper briefing items")
+async def get_daily_newspaper(limit: int = Query(default=30, ge=1, le=100)):
+    """Retrieve the recent processed article & video stories from the database."""
+    items = await get_recent_processed_items(limit=limit)
+    return {"items": items, "count": len(items)}
 
     success_count = sum(1 for r in results if isinstance(r, ArticleResult))
     failure_count = len(results) - success_count

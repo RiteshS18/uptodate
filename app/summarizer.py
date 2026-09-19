@@ -160,6 +160,16 @@ async def generate_newsletter_digest(text: str, title: str | None = None, author
             "callout": "No content available."
         }
 
+    # Long content handling: hierarchical chunk-and-combine for long transcripts and articles
+    if len(text) > 7500:
+        chunks = chunk_text(text, max_chars=3000, overlap=250)
+        chunk_summaries = []
+        for ch in chunks[:8]:
+            ch_digest = _extractive_summarize(ch, max_sentences=2)
+            if ch_digest.get("summary"):
+                chunk_summaries.append(ch_digest["summary"])
+        text = "\n\n".join(chunk_summaries)
+
     api_key = os.environ.get("OPENAI_API_KEY")
     # If API key is not configured or is placeholder, use extractive summarizer
     if not api_key or "your_openai_api_key_here" in api_key or not api_key.startswith("sk-"):
@@ -171,7 +181,6 @@ async def generate_newsletter_digest(text: str, title: str | None = None, author
         from app.embeddings import get_client
         client = get_client()
 
-        # Limit input text to first ~8000 tokens for latency and cost efficiency
         sample_text = text[:12000]
         user_prompt = f"Article Title: {title or 'Untitled'}\nByline: {author or 'Unknown'}\n\nArticle Text:\n{sample_text}"
 

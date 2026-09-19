@@ -553,26 +553,32 @@ def _extract_with_bs4(html: str) -> str:
 
 async def scrape_url(url: str) -> dict:
     """
-    Fetch and extract article text from *url*.
-
-    Returns a dict with keys:
-        title             – str or None
-        author            – str or None
-        date              – str or None (ISO-8601)
-        text              – str  (always >= _MIN_TEXT_CHARS when successful)
-        extraction_method – str  ('substack_next_data' | 'trafilatura' | 'bs4_fallback')
-        fetch_strategy    – str  ('direct' | 'google_cache' | 'wayback' | 'playwright')
-        is_listing        – bool (True if the page is a category/hub/listing page)
-        html              – str or None (preserved for listing link discovery)
-
-    Raises:
-        ExtractionFailed: if all fetch strategies fail (error_code 'fetch_blocked',
-                          'timeout', or 'dns_error'), OR if all extraction strategies
-                          yield < _MIN_TEXT_CHARS chars (error_code 'no_content').
+    Fetch and extract article or video text from *url*.
     """
+    # 0. Check if this is a YouTube video or channel URL
+    from app.youtube import is_youtube_url, extract_youtube_content, extract_video_id
+    if is_youtube_url(url) and extract_video_id(url):
+        try:
+            yt_data = await extract_youtube_content(url)
+            return {
+                "title": yt_data.get("title"),
+                "author": yt_data.get("author"),
+                "date": yt_data.get("published_date"),
+                "text": yt_data.get("text"),
+                "thumbnail_url": yt_data.get("thumbnail_url"),
+                "is_video": True,
+                "video_id": yt_data.get("video_id"),
+                "extraction_method": yt_data.get("extraction_method"),
+                "fetch_strategy": "direct",
+                "is_listing": False,
+            }
+        except Exception as exc:
+            logger.warning("YouTube extraction failed for %s: %s", url, exc)
+            raise ExtractionFailed("no_content", f"Could not retrieve transcript or captions for YouTube video: {exc}")
+
     html, fetch_strategy = await fetch_html(url)
 
-    # 0. Check if the page is a listing / hub / category index page
+    # 0b. Check if the page is a listing / hub / category index page
     if is_listing_page(html, url):
         return {
             "title": None,

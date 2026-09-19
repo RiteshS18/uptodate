@@ -22,7 +22,7 @@ _SCHEMA = """
 CREATE TABLE IF NOT EXISTS sources (
     id               TEXT PRIMARY KEY,
     url              TEXT NOT NULL UNIQUE,
-    type             TEXT NOT NULL CHECK (type IN ('rss', 'website')),
+    type             TEXT NOT NULL,
     name             TEXT NOT NULL,
     feed_url         TEXT,
     last_checked_at  TEXT,
@@ -40,6 +40,9 @@ CREATE TABLE IF NOT EXISTS items (
     raw_text      TEXT,
     summary       TEXT,
     category      TEXT,
+    thumbnail_url TEXT,
+    is_video      INTEGER DEFAULT 0,
+    video_id      TEXT,
     status        TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'filtered_out', 'processed')),
     filter_reason TEXT,
     created_at    TEXT NOT NULL,
@@ -81,16 +84,7 @@ async def get_db() -> aiosqlite.Connection:
 async def upsert_source(url: str, source_type: str, name: str | None = None, feed_url: str | None = None) -> str:
     """
     Insert a source row if one doesn't already exist for *url*, and return
-    its id either way.  Safe to call on every poll — idempotent.
-
-    Args:
-        url:         The homepage or feed URL (used as the unique key).
-        source_type: 'rss' or 'website'.
-        name:        Human-readable label (defaults to the URL itself).
-        feed_url:    Pre-discovered feed URL (only for rss sources).
-
-    Returns:
-        The source's UUID string.
+    its id either way. Safe to call on every poll — idempotent.
     """
     now = datetime.now(timezone.utc).isoformat()
     source_id = str(uuid.uuid5(uuid.NAMESPACE_URL, url))
@@ -101,15 +95,39 @@ async def upsert_source(url: str, source_type: str, name: str | None = None, fee
             """
             INSERT INTO sources (id, url, type, name, feed_url, created_at)
             VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT(url) DO NOTHING
+            ON CONFLICT(url) DO UPDATE SET
+                type = excluded.type,
+                name = coalesce(excluded.name, sources.name),
+                feed_url = coalesce(excluded.feed_url, sources.feed_url)
             """,
             (source_id, url, source_type, label, feed_url, now),
         )
         await db.commit()
-        # Re-fetch in case another source_id was already stored for this URL.
         cursor = await db.execute("SELECT id FROM sources WHERE url = ?", (url,))
         row = await cursor.fetchone()
         return row["id"] if row else source_id
+    finally:
+        await db.close()
+
+
+async def get_all_sources() -> list[dict]:
+    """Retrieve all followed sources from SQLite."""
+    db = await get_db()
+    try:
+        cursor = await db.execute("SELECT * FROM sources ORDER BY created_at DESC")
+        rows = await cursor.fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        await db.close()
+
+
+async def delete_source(source_id: str) -> bool:
+    """Delete a followed source by ID."""
+    db = await get_db()
+    try:
+        cursor = await db.execute("DELETE FROM sources WHERE id = ?", (source_id,))
+        await db.commit()
+        return cursor.rowcount > 0
     finally:
         await db.close()
 
@@ -143,11 +161,6 @@ async def mark_seen(source_id: str, urls: list[str]) -> None:
 async def update_source_last_checked(source_id: str, last_seen_marker: str | None = None) -> None:
     """
     Update last_checked_at (always) and optionally last_seen_marker for a source.
-
-    Args:
-        source_id:         The source UUID.
-        last_seen_marker:  ISO-8601 datetime string of the newest item seen
-                           (pass None to only update last_checked_at).
     """
     now = datetime.now(timezone.utc).isoformat()
     db = await get_db()
@@ -167,6 +180,72 @@ async def update_source_last_checked(source_id: str, last_seen_marker: str | Non
                 (now, source_id),
             )
         await db.commit()
+    finally:
+        await db.close()
+
+
+# ---------------------------------------------------------------------------
+# Items helpers
+# ---------------------------------------------------------------------------
+
+async def save_processed_item(item: dict) -> str:
+    """Insert or update a processed story item in the database."""
+    item_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    db = await get_db()
+    try:
+        await db.execute(
+            """
+            INSERT INTO items (id, source_id, url, title, author, published_at, raw_text, summary, category, thumbnail_url, is_video, video_id, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'processed', ?)
+            ON CONFLICT(source_id, url) DO UPDATE SET
+                title = excluded.title,
+                summary = excluded.summary,
+                category = excluded.category,
+                thumbnail_url = excluded.thumbnail_url,
+                is_video = excluded.is_video,
+                video_id = excluded.video_id,
+                status = 'processed'
+            """,
+            (
+                item_id,
+                item.get("source_id", "default"),
+                item.get("url"),
+                item.get("title"),
+                item.get("author"),
+                item.get("published_date") or item.get("published_at"),
+                item.get("text") or item.get("raw_text"),
+                item.get("summary"),
+                item.get("category"),
+                item.get("thumbnail_url"),
+                1 if item.get("is_video") else 0,
+                item.get("video_id"),
+                now,
+            ),
+        )
+        await db.commit()
+        return item_id
+    finally:
+        await db.close()
+
+
+async def get_recent_processed_items(limit: int = 50) -> list[dict]:
+    """Fetch the latest processed items across all followed sources."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            """
+            SELECT i.*, s.name as source_name, s.type as source_type
+            FROM items i
+            LEFT JOIN sources s ON i.source_id = s.id
+            WHERE i.status = 'processed'
+            ORDER BY i.created_at DESC
+            LIMIT ?
+            """,
+            (limit,),
+        )
+        rows = await cursor.fetchall()
+        return [dict(r) for r in rows]
     finally:
         await db.close()
 

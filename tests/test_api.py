@@ -94,13 +94,22 @@ def test_post_batch_extract(client):
     async def side_effect(url):
         if "fail" in url:
             raise ExtractionFailed("no_content", "Empty content")
+        if "success-1" in url:
+            return {
+                "title": "Quantum Photonics Breakthrough in Silicon Processors",
+                "author": "Dr. Vance",
+                "date": "2026-01-01",
+                "text": "Researchers have discovered a scalable technique to fabricate laser emitters directly into standard 3nm semiconductor nodes, drastically reducing interconnect latency and power consumption across modern enterprise server datacenters worldwide.",
+                "extraction_method": "trafilatura",
+                "fetch_strategy": "direct",
+            }
         return {
-            "title": "Success Title",
-            "author": "Author",
+            "title": "Deep Sea Marine Biology in Mariana Trench",
+            "author": "Oceanographer Jane",
             "date": "2026-01-01",
-            "text": "Valid body text exceeding minimum threshold requirements with substantial analysis, comprehensive background context, and clear takeaways for the readership.",
-            "extraction_method": "trafilatura",
-            "fetch_strategy": "direct",
+            "text": "Explorers discovered a new bioluminescent species living near hydrothermal vents at depths exceeding ten thousand meters below sea level, showing unprecedented metabolic pathways under extreme atmospheric pressures.",
+                "extraction_method": "trafilatura",
+                "fetch_strategy": "direct",
         }
 
     with patch("app.main.scrape_url", side_effect=side_effect):

@@ -1452,6 +1452,205 @@ body {
     color: #ffffff;
 }
 
+/* Action button accent (Fetch what's new) */
+.action-btn-accent {
+    background: linear-gradient(135deg, var(--ink-accent), #a82020) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    font-weight: 600;
+}
+.action-btn-accent:hover {
+    background: linear-gradient(135deg, #a82020, #cb2d2d) !important;
+    box-shadow: 0 0 12px rgba(185, 28, 28, 0.4);
+}
+
+/* Video Badges & Play Overlays */
+.video-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(220, 38, 38, 0.9);
+    color: #ffffff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-family: var(--font-sans);
+}
+
+.video-thumbnail-wrap {
+    position: relative;
+    cursor: pointer;
+    overflow: hidden;
+    border-radius: 4px;
+}
+
+.video-play-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 44px;
+    height: 44px;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    border: 2px solid rgba(255, 255, 255, 0.85);
+    transition: all 0.2s ease;
+}
+
+.video-thumbnail-wrap:hover .video-play-icon {
+    transform: translate(-50%, -50%) scale(1.12);
+    background: rgba(220, 38, 38, 0.9);
+    border-color: #ffffff;
+}
+
+/* Cross-Source Deduplication Pill & Multi-Coverage Bar */
+.cross-source-banner {
+    background: var(--bg-paper-alt);
+    border: 1px dashed var(--accent-gold);
+    border-radius: 6px;
+    padding: 0.6rem 0.85rem;
+    margin: 0.75rem 0;
+    font-family: var(--font-sans);
+    font-size: 0.82rem;
+}
+
+.cross-source-banner-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    color: var(--ink-primary);
+    margin-bottom: 0.35rem;
+}
+
+.cross-source-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.source-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--bg-paper);
+    border: 1px solid var(--rule-light);
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.76rem;
+    color: var(--ink-secondary);
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+.source-pill:hover {
+    border-color: var(--ink-accent);
+    color: var(--ink-accent);
+    background: var(--bg-paper-alt);
+}
+
+/* Followed Sources Drawer & Modal */
+.sources-modal-card {
+    max-width: 680px;
+    width: 90%;
+}
+
+.add-source-box {
+    background: var(--bg-paper-alt);
+    border: 1px solid var(--rule-light);
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.add-source-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 0.5rem;
+}
+
+.sources-list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+}
+
+.sources-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    max-height: 280px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.source-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-paper-alt);
+    border: 1px solid var(--rule-light);
+    padding: 0.6rem 0.85rem;
+    border-radius: 6px;
+    gap: 0.5rem;
+}
+
+.source-item-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.source-item-name {
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: var(--ink-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.source-item-url {
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: var(--font-mono);
+}
+
+.source-item-badge {
+    font-size: 0.68rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--bg-paper);
+    border: 1px solid var(--rule-light);
+    color: var(--ink-secondary);
+    font-weight: 500;
+}
+
+.source-item-del {
+    background: transparent;
+    border: none;
+    color: var(--ink-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: color 0.15s ease;
+}
+
+.source-item-del:hover {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+}
+
 /* Toast Container */
 .toast-container {
     position: fixed;
