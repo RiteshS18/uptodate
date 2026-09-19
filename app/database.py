@@ -58,9 +58,42 @@ CREATE TABLE IF NOT EXISTS seen_urls (
 
 
 async def init_db() -> None:
-    """Create tables if they don't exist. Called once at app startup."""
+    """Create tables and migrate existing schemas if needed. Called once at app startup."""
     async with aiosqlite.connect(DB_PATH) as db:
+        # Check if sources table has legacy CHECK constraint
+        cursor = await db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='sources'")
+        row = await cursor.fetchone()
+        if row and "CHECK (type IN ('rss', 'website'))" in row[0]:
+            # Migrate sources table to support youtube_channel, youtube_video, etc.
+            await db.execute("ALTER TABLE sources RENAME TO sources_old")
+            await db.executescript("""
+                CREATE TABLE sources (
+                    id               TEXT PRIMARY KEY,
+                    url              TEXT NOT NULL UNIQUE,
+                    type             TEXT NOT NULL,
+                    name             TEXT NOT NULL,
+                    feed_url         TEXT,
+                    last_checked_at  TEXT,
+                    last_seen_marker TEXT,
+                    created_at       TEXT NOT NULL
+                );
+                INSERT INTO sources (id, url, type, name, feed_url, last_checked_at, last_seen_marker, created_at)
+                SELECT id, url, type, name, feed_url, last_checked_at, last_seen_marker, created_at FROM sources_old;
+                DROP TABLE sources_old;
+            """)
+
         await db.executescript(_SCHEMA)
+
+        # Check and migrate items columns if missing
+        cursor = await db.execute("PRAGMA table_info(items)")
+        cols = [r[1] for r in await cursor.fetchall()]
+        if "thumbnail_url" not in cols:
+            await db.execute("ALTER TABLE items ADD COLUMN thumbnail_url TEXT")
+        if "is_video" not in cols:
+            await db.execute("ALTER TABLE items ADD COLUMN is_video INTEGER DEFAULT 0")
+        if "video_id" not in cols:
+            await db.execute("ALTER TABLE items ADD COLUMN video_id TEXT")
+
         # Enable foreign keys (off by default in SQLite).
         await db.execute("PRAGMA foreign_keys = ON")
         await db.commit()
